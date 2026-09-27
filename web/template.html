@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Explore January 2014 London household electricity-use similarities using correlation and mutual information.">
+  <title>London household connections · January 2014</title>
+  <style>__CSS__</style>
+</head>
+<body>
+  <header class="page-header">
+    <div class="brand"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6 18 10 8 19 5 6M5 6 8 19"/><circle cx="5" cy="6" r="3"/><circle cx="18" cy="10" r="3"/><circle cx="8" cy="19" r="3"/></svg></span><span>LONDON ENERGY STUDY</span></div>
+    <div class="edition">DATA EXPLORER <span>JAN 2014</span></div>
+  </header>
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <div><p class="eyebrow">PATTERNS IN EVERYDAY ELECTRICITY</p><h1 id="page-title">Household connections<span>.</span></h1><p class="intro-copy">Explore how London households’ electricity use moves together.</p></div>
+      <div class="stats" aria-label="Dataset overview"><div><strong id="household-count">—</strong><span>households</span></div><div><strong id="pair-count">—</strong><span>pairs evaluated</span></div><div><strong id="reading-count">1,488</strong><span>half-hour slots</span></div></div>
+    </section>
+
+    <section class="explorer" aria-label="Interactive household network">
+      <div class="network-pane">
+        <div class="graph-heading"><div><h2>Similarity network</h2><p>Position reflects consumption similarity, not geography.</p></div><span class="pill"><span></span>OFFLINE EXPLORER</span></div>
+        <div class="controls">
+          <fieldset class="metric-switch"><legend>Edge metric</legend><label><input type="radio" name="metric" value="r" checked><span>Correlation</span></label><label><input type="radio" name="metric" value="mi"><span>Mutual information</span></label></fieldset>
+          <div class="slider-control"><label for="threshold">Minimum <span id="threshold-label">|r|</span><output id="threshold-output" for="threshold">0.60</output></label><input id="threshold" type="range" min="0" max="1" step="0.01" value="0.60"></div>
+          <div class="slider-control budget-control"><label for="edge-budget">Edge limit<output id="budget-output" for="edge-budget">2,000</output></label><input id="edge-budget" type="range" min="100" max="10000" step="100" value="2000"></div>
+        </div>
+        <div class="graph-stage" id="graph-stage">
+          <canvas id="network" tabindex="0" role="img" aria-label="Household similarity network. Use household search to select a node. Arrow keys pan, plus and minus zoom, zero fits, Escape clears selection."></canvas>
+          <div class="stage-note"><span id="visible-count">Loading connections…</span><span id="selected-overlay-note" hidden></span></div>
+          <div class="graph-legend" id="graph-legend"><span><i class="legend-line positive"></i>Positive</span><span><i class="legend-line negative"></i>Negative</span><span class="legend-weight">Thicker = stronger |r|</span></div>
+          <div class="graph-toolbar" aria-label="Network navigation"><button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">+</button><button id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out">−</button><button id="fit" type="button" title="Fit all households (0)" aria-label="Fit all households"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3H3v4m10-4h4v4M3 13v4h4m10-4v4h-4"/></svg></button></div>
+          <div class="graph-empty" id="graph-empty" hidden>No candidate connections meet this filter.<br><span>Lower the minimum to see more edges.</span></div>
+          <div class="tooltip" id="node-tooltip" role="status" hidden></div>
+          <div class="gesture-hint">Scroll to zoom · drag to pan · select a household</div>
+        </div>
+        <div class="network-footer"><span><i class="node-dot"></i>One node per household <span class="dot-divider">·</span> <i class="node-dot excluded"></i><span id="limited-node-legend">Limited / constant series</span></span><button id="export-edges" type="button">Export visible edges <span aria-hidden="true">↗</span></button></div>
+      </div>
+
+      <aside class="detail-pane" aria-label="Household details">
+        <div class="sidebar-title"><h2>Find a household</h2><span>01 / EXPLORE</span></div>
+        <form id="search-form"><label class="visually-hidden" for="household-search">Household ID</label><div class="search-field"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m12.5 12.5 4 4"/></svg><input id="household-search" type="text" list="household-list" placeholder="Search household ID…" autocomplete="off" spellcheck="false"><button type="submit" aria-label="Find household">↵</button></div><datalist id="household-list"></datalist><p class="search-message" id="search-message" role="status"></p></form>
+        <div class="selection-empty" id="selection-empty"><div class="empty-motif" aria-hidden="true"><svg viewBox="0 0 130 105"><path d="M24 34 65 51 105 22M65 51 97 85M65 51 29 89"/><circle cx="24" cy="34" r="5"/><circle cx="105" cy="22" r="5"/><circle cx="97" cy="85" r="5"/><circle cx="29" cy="89" r="5"/><circle class="center" cx="65" cy="51" r="11"/></svg></div><h3>A city of individual rhythms.</h3><p>Select a node or search an ID to explore its strongest available connections and daily electricity use.</p><button id="example-household" class="text-button" type="button">Explore a household <span aria-hidden="true">→</span></button></div>
+        <div id="selection-detail" hidden>
+          <div class="selection-heading"><div><p class="eyebrow">SELECTED HOUSEHOLD</p><h3 id="selected-id"></h3></div><button id="clear-selection" class="icon-button" type="button" aria-label="Clear household selection">×</button></div>
+          <p id="selected-status" class="selected-status"></p>
+          <dl class="household-stats"><div><dt>Data coverage</dt><dd id="selected-coverage"></dd></div><div><dt>Mean / half hour</dt><dd id="selected-mean"></dd></div><div><dt>Tariff</dt><dd id="selected-tariff"></dd></div></dl>
+          <div class="profile-section"><div class="section-label"><h4>Daily electricity use</h4><span>mean kWh / half hour</span></div><canvas id="daily-profile" role="img" aria-label="Daily electricity use for the selected household"></canvas><div class="profile-axis"><span>1 JAN</span><span>16</span><span>31 JAN</span></div><p class="profile-note">Average of available half-hour readings each day.</p></div>
+          <div class="connections-section"><div class="section-label"><h4>Strongest connections</h4><span id="neighbor-unit">PEARSON r</span></div><p class="connection-note" id="connection-note">Available in the sparse candidate graph. Independent of the edge filter.</p><div id="neighbor-table"></div></div>
+        </div>
+        <div class="metric-explanation"><p class="eyebrow" id="metric-kicker">READING CORRELATION</p><p id="metric-description">Pearson r measures linear co-movement. Color shows the sign; thickness shows its magnitude. Shared routines can produce similar patterns.</p></div>
+      </aside>
+    </section>
+
+    <section class="method-strip" aria-label="Analysis methods"><details id="methods"><summary><span>Behind the network</span><span class="method-summary">Data, calculations &amp; interpretation <span aria-hidden="true">+</span></span></summary><div class="method-grid"><div><h3>The data</h3><p id="method-data"></p><p id="method-cleaning"></p></div><div><h3>Two views of similarity</h3><p id="method-metrics"></p><p>These are contemporaneous associations in raw consumption. Daily routines, tariffs and shared weather may drive them; they do not establish a direct relationship between households.</p></div><div><h3>A readable network</h3><p id="method-network"></p><p>Position stays fixed when the metric changes. Household coordinates are not available in this dataset; this is a similarity layout, not a street map.</p><p><a id="repository-link" href="https://github.com/KVerder/GSclone" target="_blank" rel="noopener">Code, complete pair results &amp; methodology ↗</a></p></div></div></details></section>
+    <footer class="page-footer"><span>UK Power Networks · Low Carbon London</span><a id="source-link" target="_blank" rel="noopener" hidden>Source: London Datastore ↗</a><span>JANUARY 01—31, 2014</span></footer>
+    <p class="visually-hidden" id="network-announcement" aria-live="polite"></p>
+  </main>
+  <script id="network-data" type="application/json">__DATA_JSON__</script>
+  <script>__APP_JS__</script>
+</body>
+</html>

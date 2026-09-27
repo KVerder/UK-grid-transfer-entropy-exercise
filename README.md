@@ -1,5 +1,60 @@
 # GSclone
 
+## Interactive household network
+
+Download and open [household-network.html](household-network.html) in a browser.
+It contains its own code and display data and works offline. GitHub's file page
+shows the HTML source; use **Download raw file** and open the downloaded file.
+
+- Toggle Pearson correlation and mutual information to change edge weights.
+- Search any household ID, inspect its retained strongest connections, and
+  compare its daily consumption profile.
+- Pan, zoom, change the edge threshold or edge limit, and export visible edges.
+- Positions group similar consumption profiles. **They are not household locations.**
+- The display is sparse. Every unordered pair is evaluated separately in
+  [analysis/pairs.npz](analysis/pairs.npz); omitted links are not necessarily zero.
+
+See [methods](docs/METHODS.md), [the executed specification](docs/task-prompt.md),
+and [three review rounds](docs/REVIEWS.md). The original source CSV is preserved.
+
+### Reproduce
+
+Prerequisites: Python 3.11 or newer, a C++17 compiler (`g++` or `clang++` on PATH),
+and Git LFS. An OpenMP-capable compiler speeds up the all-pair computation.
+
+```sh
+git lfs install
+git clone https://github.com/KVerder/GSclone.git
+cd GSclone
+git lfs pull
+python -m pip install -r requirements.txt
+python scripts/analyze.py --threads 8
+python scripts/build_html.py
+python -m unittest discover -s tests -p "test_*.py"
+```
+
+To rebuild the layout/display dataset from existing pair results after changing
+display settings, run `python scripts/analyze.py --reuse-pairs`, then rebuild the
+HTML. Reuse verifies the input checksum, household IDs, and metric settings.
+
+Retrieve any two distinct household IDs, including a pair hidden in the graph:
+
+```sh
+python scripts/lookup_pair.py MAC000002 MAC000003
+```
+
+Browser integration checks use Node.js and Playwright:
+
+```sh
+npm install
+npx playwright install chromium
+npm run test:browser
+```
+
+Alternatively set `BROWSER_EXECUTABLE` to an installed Chromium/Edge executable.
+Browser checks run offline, exercise controls, and save screenshots in the ignored
+`test-results/` directory. The static HTML itself requires none of these tools.
+
 ## London smart-meter readings: January 2014
 
 [data/london-smart-meters-2014-01.csv](data/london-smart-meters-2014-01.csv) contains **7,525,113 records from 5,108 households**. The file is 382,838,595 bytes and is stored with Git LFS.
