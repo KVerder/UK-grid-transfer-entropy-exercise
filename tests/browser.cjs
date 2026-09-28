@@ -33,7 +33,7 @@ function csvLine(line) {
   const remoteRequests = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('request', r => { if (/^https?:/.test(r.url())) remoteRequests.push(r.url()); });
-  const url = pathToFileURL(path.join(root, 'household-network.html')).href;
+  const url = pathToFileURL(process.env.HTML_PATH || path.join(root, 'household-network.html')).href;
   await page.goto(url);
   await page.waitForFunction(() => !document.querySelector('#visible-count').textContent.includes('Loading'));
   const data = await page.locator('#network-data').evaluate(el => JSON.parse(el.textContent));

@@ -6,8 +6,10 @@
 .node-legends { display: flex; flex-direction: column; gap: 8px; }
 #node-color-legend, .consumption-scale, .quality-legend { display: flex; align-items: center; gap: 8px; }
 #node-color-legend { flex-wrap: wrap; }
-.consumption-scale { font-variant-numeric: tabular-nums; }
-.consumption-gradient { width: 90px; height: 7px; border-radius: 3px; background: linear-gradient(to right, hsl(120,72%,40%), hsl(60,72%,40%), hsl(0,72%,40%)); }
+.consumption-scale { font-variant-numeric: tabular-nums; flex-direction: column; align-items: stretch; width: 190px; gap: 4px; }
+.consumption-stops { display: flex; justify-content: space-between; font-size: 7px; }
+.consumption-stops b { font-weight: 500; }
+.consumption-gradient { width: 100%; height: 7px; border-radius: 3px; background: linear-gradient(to right, hsl(120,72%,40%), hsl(105,72%,40%) 25%, hsl(60,72%,40%) 50%, hsl(45,72%,40%) 75%, hsl(0,72%,40%)); }
 .node-dot.excluded { border: 1px dashed #143f31; background: transparent; }
 .network-pane { height: 765px; }
 .graph-stage { flex: 1; height: auto; min-height: 350px; }

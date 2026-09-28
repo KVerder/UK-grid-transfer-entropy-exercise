@@ -2,13 +2,19 @@
 
 ## Interactive household network
 
+**KSG update in progress:** the default pipeline now uses JIDT KSG algorithm 1
+with `k=2`. A full local run is underway. The currently published HTML still
+contains the previous discrete MI values, explicitly labelled on the page.
+See [run status and validation](docs/KSG_RUN.md).
+
 Download and open [household-network.html](household-network.html) in a browser.
 It contains its own code and display data and works offline. GitHub's file page
 shows the HTML source; use **Download raw file** and open the downloaded file.
 
 - Toggle Pearson correlation and mutual information to change edge weights.
-- Node color shows January mean kWh per observed half-hour, from green (lowest)
-  to red (highest). Stronger edges are more opaque: blue for positive correlation,
+- Node color uses a quadratic scale on each side of average household mean use:
+  green at the minimum, yellow at the mean, red at the maximum. Stronger edges
+  are linearly thicker and more opaque: blue for positive correlation,
   yellow for negative correlation, and purple for mutual information.
 - Search any household ID, inspect its retained strongest connections, and
   compare its daily consumption profile.
@@ -25,8 +31,8 @@ and [three review rounds](docs/REVIEWS.md). The original source CSV is preserved
 Prerequisites: Python 3.11 or newer, a C++17 compiler (`g++` or `clang++` on PATH),
 a Java JDK 11 or newer (`java` and `javac` on PATH), and Git LFS.
 An OpenMP-capable compiler speeds up Pearson computation. MI is calculated by
-JIDT 1.6.1's `MutualInformationCalculatorDiscrete`, using up to eight quantile
-bins. The first run downloads the official JIDT release and verifies pinned
+JIDT 1.6.1's `MutualInfoCalculatorMultiVariateKraskov1`, using continuous readings
+and `k=2`, with no quantile binning. The first run downloads the official JIDT release and verifies pinned
 SHA-256 checksums; subsequent runs use the verified local jar. See
 [JIDT provenance and setup](docs/JIDT.md).
 
@@ -36,7 +42,7 @@ git clone https://github.com/KVerder/GSclone.git
 cd GSclone
 git lfs pull
 python -m pip install -r requirements.txt
-python scripts/analyze.py --threads 8
+python scripts/analyze.py --threads 8 --mi-k 2
 python scripts/build_html.py
 python -m unittest discover -s tests -p "test_*.py"
 ```

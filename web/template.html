@@ -30,13 +30,13 @@
         <div class="graph-stage" id="graph-stage">
           <canvas id="network" tabindex="0" role="img" aria-label="Household similarity network. Use household search to select a node. Arrow keys pan, plus and minus zoom, zero fits, Escape clears selection."></canvas>
           <div class="stage-note"><span id="visible-count">Loading connections…</span><span id="selected-overlay-note" hidden></span></div>
-          <div class="graph-legend" id="graph-legend"><span><i class="legend-line positive"></i>Positive</span><span><i class="legend-line negative"></i>Negative</span><span class="legend-weight">More opaque = stronger |r|</span></div>
+          <div class="graph-legend" id="graph-legend"><span><i class="legend-line positive"></i>Positive</span><span><i class="legend-line negative"></i>Negative</span><span class="legend-weight">Thicker + more opaque = stronger |r|</span></div>
           <div class="graph-toolbar" aria-label="Network navigation"><button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">+</button><button id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out">−</button><button id="fit" type="button" title="Fit all households (0)" aria-label="Fit all households"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3H3v4m10-4h4v4M3 13v4h4m10-4v4h-4"/></svg></button></div>
           <div class="graph-empty" id="graph-empty" hidden>No candidate connections meet this filter.<br><span>Lower the minimum to see more edges.</span></div>
           <div class="tooltip" id="node-tooltip" role="status" hidden></div>
           <div class="gesture-hint">Scroll to zoom · drag to pan · select a household</div>
         </div>
-        <div class="network-footer"><div class="node-legends"><div id="node-color-legend"><span>Mean use · kWh / half hour</span><span class="consumption-scale"><span id="consumption-min">—</span><i class="consumption-gradient"></i><span id="consumption-max">—</span></span></div><span class="quality-legend"><i class="node-dot excluded"></i>Dashed outline: <span id="limited-node-legend">Correlation unavailable</span></span></div><button id="export-edges" type="button">Export visible edges <span aria-hidden="true">↗</span></button></div>
+        <div class="network-footer"><div class="node-legends"><div id="node-color-legend"><span>Mean use · kWh / half hour<br>Quadratic · yellow = average</span><span class="consumption-scale"><span class="consumption-gradient" aria-hidden="true"></span><span class="consumption-stops"><span>Min <b id="consumption-min">—</b></span><span>Mean <b id="consumption-middle">—</b></span><span>Max <b id="consumption-max">—</b></span></span></span></div><span class="quality-legend"><i class="node-dot excluded"></i>Dashed outline: <span id="limited-node-legend">Correlation unavailable</span></span></div><button id="export-edges" type="button">Export visible edges <span aria-hidden="true">↗</span></button></div>
       </div>
 
       <aside class="detail-pane" aria-label="Household details">
@@ -50,7 +50,7 @@
           <div class="profile-section"><div class="section-label"><h4>Daily electricity use</h4><span>mean kWh / half hour</span></div><canvas id="daily-profile" role="img" aria-label="Daily electricity use for the selected household"></canvas><div class="profile-axis"><span>1 JAN</span><span>16</span><span>31 JAN</span></div><p class="profile-note">Average of available half-hour readings each day.</p></div>
           <div class="connections-section"><div class="section-label"><h4>Strongest connections</h4><span id="neighbor-unit">PEARSON r</span></div><p class="connection-note" id="connection-note">Available in the sparse candidate graph. Independent of the edge filter.</p><div id="neighbor-table"></div></div>
         </div>
-        <div class="metric-explanation"><p class="eyebrow" id="metric-kicker">READING CORRELATION</p><p id="metric-description">Pearson r measures linear co-movement. Blue shows positive correlation; yellow shows negative correlation. Opacity shows its magnitude. Shared routines can produce similar patterns.</p></div>
+        <div class="metric-explanation"><p class="eyebrow" id="metric-kicker">READING CORRELATION</p><p id="metric-description">Pearson r measures linear co-movement. Blue shows positive correlation; yellow shows negative correlation. Thickness and opacity show its magnitude. Shared routines can produce similar patterns.</p></div>
       </aside>
     </section>
 

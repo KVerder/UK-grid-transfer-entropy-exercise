@@ -17,12 +17,13 @@ import time
 import numpy as np
 import pandas as pd
 from setup_jidt import ensure_jidt, JAR_SHA256, VERSION as JIDT_VERSION
+from ksg import calculate as calculate_ksg, reference as reference_ksg, VERSION as KSG_VERSION
 
 ROOT = Path(__file__).resolve().parents[1]
 PERIOD_START = "2014-01-01"
 PERIOD_END = "2014-02-01"
 SOURCE = "https://data.london.gov.uk/dataset/smartmeter-energy-consumption-data-in-london-households-vqm0d"
-METRIC_VERSION = "pearson-pairshift-jidt-1.6.1-discrete-quantile-nats-v2"
+METRIC_VERSION = KSG_VERSION
 
 
 def pair_offset(i: int | np.ndarray, j: int | np.ndarray, n: int):
@@ -137,38 +138,29 @@ def reference_pair(x, y, bx, by, minimum=1000, max_bins=8):
     return r, max(0., mi), n
 
 
-def compute_jidt_mi(work: Path, households: int, timestamps: int, minimum: int, max_bins: int, threads: int):
-    java, javac = shutil.which("java"), shutil.which("javac")
-    if not java or not javac:
-        raise RuntimeError("Install a Java JDK (11 or newer), with java and javac on PATH")
-    jar = ensure_jidt()
-    classes = work / "java-classes"
-    classes.mkdir(parents=True, exist_ok=True)
-    subprocess.run([javac, "-encoding", "UTF-8", "-cp", str(jar), "-d", str(classes),
-                    str(ROOT / "scripts/JidtPairMI.java")], check=True)
-    subprocess.run([java, "-Xmx2g", "-cp", os.pathsep.join([str(classes), str(jar)]),
-                    "JidtPairMI", str(work), str(households), str(timestamps),
-                    str(minimum), str(max_bins), str(threads)], check=True)
+def compute_jidt_mi(work: Path, households: int, timestamps: int, minimum: int, k: int, threads: int):
+    values = np.fromfile(work / "values.bin", dtype="<f8").reshape(households, timestamps)
+    return calculate_ksg(values, work, minimum=minimum, k=k, threads=threads)
 
 
-def compute_pairs(values, bins, work: Path, minimum: int, max_bins: int, threads: int):
+def compute_pairs(values, bins, work: Path, minimum: int, k: int, threads: int):
     centered = values - np.nanmean(values, axis=1, keepdims=True)
     # Center once for numerical stability; kernel still recenters each intersection.
     centered.astype("<f8").tofile(work / "centered.bin")
     bins.tofile(work / "bins.bin")
     executable = compile_kernel(work)
     subprocess.run([str(executable), str(work), str(len(values)), str(values.shape[1]),
-                    str(minimum), str(max_bins), str(threads)], check=True)
-    compute_jidt_mi(work, len(values), values.shape[1], minimum, max_bins, threads)
+                    str(minimum), "8", str(threads)], check=True)
+    calculate_ksg(values, work, minimum=minimum, k=k, threads=threads)
     return (np.fromfile(work / "correlation.bin", dtype="<f4"),
             np.fromfile(work / "mutual_information.bin", dtype="<f4"),
             np.fromfile(work / "overlap.bin", dtype="<u2"))
 
 
-def validate_pair_archive(saved, source_hash, ids, minimum, max_bins, timestamp_count=1488):
+def validate_pair_archive(saved, source_hash, ids, minimum, k, timestamp_count=1488):
     """Reject incompatible, stale, or damaged cached pair arrays, even under python -O."""
     required = {"ids", "correlation", "mutual_information", "overlap", "source_sha256",
-                "min_overlap", "mi_bins", "metric_version"}
+                "min_overlap", "mi_k", "metric_version", "mi_noise", "mi_seed"}
     if not required.issubset(saved.keys()):
         raise ValueError("Pair archive lacks required schema/version metadata; recompute pairs")
     # NpzFile decompresses on every indexing operation; load each member once.
@@ -177,8 +169,9 @@ def validate_pair_archive(saved, source_hash, ids, minimum, max_bins, timestamp_
         raise ValueError("Metric version changed; recompute pairs")
     if np.ndim(saved["source_sha256"]) != 0 or str(saved["source_sha256"]) != source_hash:
         raise ValueError("Input checksum changed; cannot reuse pairs")
-    if (np.ndim(saved["min_overlap"]) != 0 or np.ndim(saved["mi_bins"]) != 0 or
-            int(saved["min_overlap"]) != minimum or int(saved["mi_bins"]) != max_bins):
+    if (np.ndim(saved["min_overlap"]) != 0 or np.ndim(saved["mi_k"]) != 0 or
+            int(saved["min_overlap"]) != minimum or int(saved["mi_k"]) != k or
+            float(saved["mi_noise"]) != 1e-8 or int(saved["mi_seed"]) != 42):
         raise ValueError("Analysis settings changed; cannot reuse pairs")
     if saved["ids"].dtype.kind != "U" or not np.array_equal(saved["ids"], ids):
         raise ValueError("Household ordering changed; cannot reuse pairs")
@@ -193,7 +186,7 @@ def validate_pair_archive(saved, source_hash, ids, minimum, max_bins, timestamp_
     valid_r, valid_mi = np.isfinite(corr), np.isfinite(mi)
     if np.isinf(corr).any() or np.isinf(mi).any():
         raise ValueError("Infinite metric in pair archive")
-    if np.any(np.abs(corr[valid_r]) > 1) or np.any(mi[valid_mi] < 0) or np.any(mi[valid_mi] > np.log(max_bins) + 1e-6):
+    if np.any(np.abs(corr[valid_r]) > 1):
         raise ValueError("Pair metric outside mathematical bounds")
     if not np.array_equal(valid_mi, overlap >= minimum) or np.any(valid_r & ~valid_mi):
         raise ValueError("Pair eligibility disagrees with overlap")
@@ -269,9 +262,8 @@ def similarity_layout(values, threads=8):
                            "layoutMeanImputationOnly": True}
 
 
-def validate_sample(values, bins, corr, mi, overlap, minimum, max_bins, sample_size=256):
+def validate_sample(values, bins, corr, mi, overlap, minimum, neighbors, sample_size=256):
     from scipy.stats import pearsonr
-    from sklearn.metrics import mutual_info_score
     rng = np.random.default_rng(42)
     n = len(values)
     pairs = {(0, n-1)}
@@ -289,14 +281,14 @@ def validate_sample(values, bins, corr, mi, overlap, minimum, max_bins, sample_s
             continue
         x, y = values[i, valid], values[j, valid]
         expected_r = pearsonr(x, y).statistic if np.ptp(x) > 0 and np.ptp(y) > 0 else np.nan
-        expected_mi = mutual_info_score(bins[i, valid], bins[j, valid])
+        expected_mi = reference_ksg(x, y, k=neighbors, seed=42+k)
         assert np.isclose(corr[k], expected_r, atol=1e-6, equal_nan=True), (i, j, "correlation")
-        assert np.isclose(mi[k], expected_mi, atol=1e-6), (i, j, "MI")
+        assert np.isclose(mi[k], expected_mi, atol=2e-5), (i, j, "MI", mi[k], expected_mi)
         if np.isfinite(expected_r):
             max_corr_error = max(max_corr_error, float(abs(corr[k] - expected_r)))
         max_mi_error = max(max_mi_error, abs(float(mi[k]) - float(expected_mi)))
     return {"sampledPairs": len(pairs), "seed": 42,
-            "pearsonReference": "scipy.stats.pearsonr", "miReference": "sklearn.metrics.mutual_info_score",
+            "pearsonReference": "scipy.stats.pearsonr", "miReference": "Independent KSG-1 using SciPy cKDTree/digamma and matching seeded jitter",
             "maximumAbsoluteCorrelationError": max_corr_error, "maximumAbsoluteMiError": max_mi_error}
 
 
@@ -307,11 +299,11 @@ def main():
     parser.add_argument("--work", type=Path, default=ROOT / "work/analysis")
     parser.add_argument("--threads", type=int, default=min(8, os.cpu_count() or 1))
     parser.add_argument("--min-overlap", type=int, default=1000)
-    parser.add_argument("--mi-bins", type=int, default=8)
+    parser.add_argument("--mi-k", type=int, default=2, help="KSG-1 nearest neighbours (default 2)")
     parser.add_argument("--top-k", type=int, default=12)
     parser.add_argument("--reuse-pairs", action="store_true", help="Reuse existing pairs.npz; verify input checksum and settings")
     args = parser.parse_args()
-    if not 2 <= args.min_overlap <= 1488 or args.threads < 1 or args.top_k < 1:
+    if not 1 <= args.mi_k < args.min_overlap <= 1488 or args.threads < 1 or args.top_k < 1:
         parser.error("Require 2 <= min-overlap <= 1488, threads >= 1, top-k >= 1")
     started = time.perf_counter()
     args.work.mkdir(parents=True, exist_ok=True)
@@ -321,20 +313,20 @@ def main():
     print("Loading and resolving duplicate records", flush=True)
     ids, tariffs, values, quality = load_readings(args.input)
     print(f"Loaded {len(ids):,} households; quality={quality}", flush=True)
-    bins, bin_edges = quantile_bins(values, args.mi_bins)
+    bins = np.where(np.isfinite(values), 0, -1).astype(np.int8)  # Pearson observation mask only.
     print("Computing all unordered household pairs", flush=True)
     if args.reuse_pairs:
         with np.load(args.output / "pairs.npz", allow_pickle=False) as saved:
             corr, mi, overlap = validate_pair_archive(saved, source_hash, ids, args.min_overlap,
-                                                     args.mi_bins, values.shape[1])
+                                                     args.mi_k, values.shape[1])
     else:
-        corr, mi, overlap = compute_pairs(values, bins, args.work, args.min_overlap, args.mi_bins, args.threads)
+        corr, mi, overlap = compute_pairs(values, bins, args.work, args.min_overlap, args.mi_k, args.threads)
         np.savez_compressed(args.output / "pairs.npz", ids=ids, correlation=corr,
                             mutual_information=mi, overlap=overlap, source_sha256=source_hash,
-                            min_overlap=args.min_overlap, mi_bins=args.mi_bins, metric_version=METRIC_VERSION)
+                            min_overlap=args.min_overlap, mi_k=args.mi_k, mi_noise=1e-8, mi_seed=42, metric_version=METRIC_VERSION)
     pair_seconds = time.perf_counter() - started
     print(f"Pair matrix ready after {pair_seconds:.1f}s; independently checking sampled pairs", flush=True)
-    validation = validate_sample(values, bins, corr, mi, overlap, args.min_overlap, args.mi_bins)
+    validation = validate_sample(values, bins, corr, mi, overlap, args.min_overlap, args.mi_k)
     print("Selecting sparse display edges and embedding household similarity", flush=True)
     edges = select_edges(corr, mi, overlap, len(ids), args.top_k)
     xy, clusters, layout_meta = similarity_layout(values, args.threads)
@@ -352,7 +344,6 @@ def main():
               "eligible": bool(counts[i] >= args.min_overlap),
               "correlationEligible": bool(counts[i] >= args.min_overlap and variances[i] > 0),
               "miEligible": bool(counts[i] >= args.min_overlap),
-              "effectiveBins": int(len(np.unique(bins[i, bins[i] >= 0]))),
               "daily": [float(v) if np.isfinite(v) else None for v in daily[i]]}
              for i, hid in enumerate(ids)]
     meta = {"title": "London households · January 2014", "source": SOURCE,
@@ -363,10 +354,12 @@ def main():
             "insufficientOverlapPairs": int((overlap < args.min_overlap).sum()),
             "constantHouseholds": int((variances == 0).sum()),
             "householdsBelowMinOverlap": int((counts < args.min_overlap).sum()),
-            "minOverlap": args.min_overlap, "miBins": args.mi_bins, "miUnit": "nats",
-            "miEstimator": "JIDT MutualInformationCalculatorDiscrete on tied-value-preserving per-household quantile bins",
+            "minOverlap": args.min_overlap, "miK": args.mi_k, "miUnit": "nats",
+            "miEstimator": "JIDT MutualInfoCalculatorMultiVariateKraskov1 on continuous half-hour consumption",
             "miLibrary": "JIDT", "miLibraryVersion": JIDT_VERSION, "miLibraryJarSha256": JAR_SHA256,
-            "miNativeUnit": "bits", "miUnitConversion": "JIDT bits multiplied by ln(2) to store nats",
+            "miNativeUnit": "nats", "miUnitConversion": "None; KSG returns nats directly",
+            "miAlgorithm": 1, "miNoiseStdDev": 1e-8, "miSeed": 42, "miNormalization": "Paired-observation sample mean and sample standard deviation",
+            "miTheilerWindow": 0, "negativeMiEstimates": int(np.sum(mi < 0)),
             "metricVersion": METRIC_VERSION,
             "layout": "similarity", "layoutMethod": "Seeded t-SNE on 32 SVD components of centered unit-length series",
             "locationAvailable": False,
@@ -376,7 +369,7 @@ def main():
             "dailyUnit": "Mean kWh per observed half-hour, by date", "sourceSha256": source_hash,
             "duplicatePolicy": "Remove repeated household/timestamp/value records, then average distinct conflicting values",
             "missingPolicy": "No metric imputation; use observed timestamp intersection for both metrics",
-            "miCaveat": "Finite-sample empirical MI is upward-biased and does not establish statistical significance or causality. Serial dependence and shared daily/weekly patterns are not removed.",
+            "miCaveat": "KSG estimates can be negative at finite sample sizes; retain raw values but draw only positive MI edges. Rounded meter readings are tie-broken with seeded tiny Gaussian noise. Serial dependence and shared patterns are not removed; these are not significance or causality tests.",
             "quality": quality, "validation": validation, **layout_meta}
     network = {"meta": meta, "nodes": nodes, "edges": edges}
     (args.output / "network.json").write_text(json.dumps(network, separators=(",", ":"), allow_nan=False), encoding="utf-8")
@@ -384,9 +377,8 @@ def main():
                 "pairStageSeconds": round(pair_seconds, 2),
                 "pairFile": "pairs.npz", "pairOrdering": "Row-major upper triangle i<j; k=i*(2*N-i-1)//2+(j-i-1)",
                 "arrays": {"ids": "Sorted household IDs", "correlation": "float32; NaN for insufficient overlap or zero variance on overlap",
-                           "mutual_information": "float32 nats; NaN for insufficient overlap, zero for a constant overlapping binned series",
-                           "overlap": "uint16 shared observed half-hours"},
-                "binThresholds": {str(hid): cuts for hid, cuts in zip(ids, bin_edges)}}
+                           "mutual_information": "float32 raw KSG-1 nats (negative estimates retained); NaN for insufficient overlap; constant-variable MI set to zero",
+                           "overlap": "uint16 shared observed half-hours"}}
     (args.output / "manifest.json").write_text(json.dumps(manifest, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     print(json.dumps({"households": len(ids), "pairs": len(corr), "edges": len(edges),
                       "validCorrelationPairs": meta["validCorrelationPairs"], "validMiPairs": meta["validMiPairs"],

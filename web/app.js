@@ -14,10 +14,13 @@
   const observedMeans = nodes.map(node => node.mean).filter(finite);
   const minMean = observedMeans.length ? Math.min(...observedMeans) : 0;
   const maxMean = observedMeans.length ? Math.max(...observedMeans) : 0;
-  // Linear scale of mean observed half-hour consumption, shared by both edge modes.
+  const middleMean = observedMeans.length ? observedMeans.reduce((sum, value) => sum + value, 0) / observedMeans.length : 0;
+  // Yellow is the mean of household means; each side uses its own quadratic scale.
   const consumptionColor = value => {
     if (!finite(value)) return colors.muted;
-    const fraction = maxMean > minMean ? Math.max(0, Math.min(1, (value - minMean) / (maxMean - minMean))) : 0.5;
+    let fraction = 0.5;
+    if (value < middleMean && middleMean > minMean) fraction = 0.5 * Math.pow(Math.max(0, (value - minMean) / (middleMean - minMean)), 2);
+    if (value > middleMean && maxMean > middleMean) fraction = 0.5 + 0.5 * Math.pow(Math.min(1, (value - middleMean) / (maxMean - middleMean)), 2);
     return `hsl(${120 * (1 - fraction)}, 72%, 40%)`;
   };
   const nodeColors = nodes.map(node => consumptionColor(node.mean));
@@ -124,7 +127,7 @@
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
     ctx.strokeStyle = edgeColor(edge);
     ctx.globalAlpha = 0.04 + 0.81 * Math.min(1, strength);
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 0.25 + 3.75 * Math.min(1, strength);
     ctx.stroke();
   }
 
@@ -290,7 +293,7 @@
     let message = 'January 2014 · half-hour electricity consumption';
     if (metric === 'r' && constant) message = 'Constant series: Pearson correlation is undefined. Mutual information may still be valid at zero.';
     else if (!isEligible(selected)) message = `${metric === 'r' ? 'Pearson correlation' : 'Mutual information'} unavailable: insufficient usable observations${metric === 'r' ? ' or variability' : ''}. The household remains searchable.`;
-    else if (metric === 'mi' && singleBin) message = 'Single-bin series: MI is 0 nats for pairs meeting the observation threshold. Zero-strength edges are not drawn.';
+    else if (metric === 'mi' && singleBin) message = 'Constant / single-bin series: MI is 0 nats for pairs meeting the observation threshold. Zero-strength edges are not drawn.';
     else if (finite(node.observations)) message = `${number(node.observations)} usable half-hour observations · January 2014`;
     $('selected-status').textContent = message;
   }
@@ -321,11 +324,11 @@
     $('threshold-label').textContent = metric === 'r' ? '|r|' : 'MI';
     $('metric-kicker').textContent = metric === 'r' ? 'READING CORRELATION' : 'READING MUTUAL INFORMATION';
     $('metric-description').textContent = metric === 'r'
-      ? 'Blue edges show positive correlation; yellow edges show negative correlation. Higher absolute correlation makes an edge more opaque. Shared routines can produce similar patterns.'
-      : 'Mutual information detects dependence beyond a straight-line relationship. More opaque purple edges mean higher MI, measured in nats. It has no positive or negative sign.';
+      ? 'Blue edges show positive correlation; yellow edges show negative correlation. Higher absolute correlation makes an edge thicker and more opaque. Shared routines can produce similar patterns.'
+      : 'Mutual information detects dependence beyond a straight-line relationship. Thicker, more opaque purple edges mean higher MI, measured in nats. It has no positive or negative sign.';
     $('graph-legend').innerHTML = metric === 'r'
-      ? '<span><i class="legend-line positive"></i>Positive</span><span><i class="legend-line negative"></i>Negative</span><span class="legend-weight">More opaque = stronger |r|</span>'
-      : '<span><i class="legend-line mi"></i>Mutual information</span><span class="legend-weight">More opaque = higher MI · nats</span>';
+      ? '<span><i class="legend-line positive"></i>Positive</span><span><i class="legend-line negative"></i>Negative</span><span class="legend-weight">Thicker + more opaque = stronger |r|</span>'
+      : '<span><i class="legend-line mi"></i>Mutual information</span><span class="legend-weight">Thicker + more opaque = higher MI · nats</span>';
     $('limited-node-legend').textContent = metric === 'r' ? 'Correlation unavailable' : 'MI unavailable';
     updateVisibleEdges(); if (selected !== null) { renderSelectedStatus(); renderNeighbors(); }
     announce(`Edges now show ${metric === 'r' ? 'Pearson correlation' : 'mutual information in nats'}. Household positions are unchanged.`);
@@ -402,12 +405,15 @@
   $('reading-count').textContent = number(meta.timestampCount ?? meta.timeSlots ?? meta.slotCount ?? 1488);
   $('limited-node-legend').textContent = 'Correlation unavailable';
   $('consumption-min').textContent = minMean.toFixed(3);
+  $('consumption-middle').textContent = middleMean.toFixed(3);
   $('consumption-max').textContent = maxMean.toFixed(3);
-  $('node-color-legend').title = `Linear scale from ${minMean.toFixed(3)} to ${maxMean.toFixed(3)} kWh per observed half-hour. Missing readings are excluded from the January mean. Green is lowest; red is highest.`;
+  $('node-color-legend').title = `Quadratic scale on each side of the mean: green ${minMean.toFixed(3)}, yellow ${middleMean.toFixed(3)}, red ${maxMean.toFixed(3)} kWh per observed half-hour. The midpoint is the unweighted mean of household January means. Missing readings are excluded.`;
   $('method-data').textContent = `January 1–31, 2014; ${number(nodes.length)} households, ${number(meta.timestampCount ?? meta.timeSlots ?? meta.slotCount ?? 1488)} half-hour slots, ${number(meta.pairCount ?? nodes.length * (nodes.length - 1) / 2)} unordered household pairs evaluated. UK Power Networks Low Carbon London smart-meter data from the London Datastore.`;
   $('method-cleaning').textContent = `Duplicate household/timestamp readings are resolved before analysis. Metrics use only jointly available timestamps, with a minimum of ${number(meta.minOverlap ?? 1000)} paired readings. Missing values are not imputed for either metric. Coverage describes available half-hour slots.`;
-  $('method-metrics').textContent = `Pearson correlation uses raw half-hour kWh. Mutual information is calculated with JIDT ${meta.miLibraryVersion ?? "1.6.1"} (discrete estimator, bits converted to nats), using up to ${meta.miBins ?? 8} household-global quantile bins with ties kept together. MI is not bias-corrected and small positive values need not indicate substantive dependence. Constant series have undefined correlation.`;
-  $('method-network').textContent = `All household pairs are evaluated, but this HTML contains ${number(edges.length)} candidate edges: the union of each household's strongest ${meta.topK ?? 12} neighbors per metric. Filters show a subset; selecting a household adds its strongest candidates. Node hue runs linearly from green to red by January mean kWh per observed half-hour, excluding missing readings. Edges have fixed width; opacity rises with |r| or MI divided by the largest candidate MI. Opacity scales differ between metrics. Complete pair results are in analysis/pairs.npz.`;
+  $('method-metrics').textContent = meta.miAlgorithm === 1
+    ? `Pearson correlation uses raw half-hour kWh. MI uses JIDT KSG algorithm 1 with k=${meta.miK}, continuous readings, paired-observation standardization, and reproducible tiny noise to break ties. KSG returns nats directly. Negative finite-sample estimates are retained in the complete results; only positive MI is drawn. No temporal exclusion window is applied. Constant variables have MI set to zero and undefined correlation.`
+    : `Pearson correlation uses raw half-hour kWh. This displayed dataset uses JIDT's discrete estimator with up to ${meta.miBins ?? 8} quantile bins, converted to nats. The full KSG-1 calculation is pending; this view has not been relabelled as KSG. Constant series have undefined correlation.`;
+  $('method-network').textContent = `All household pairs are evaluated, but this HTML contains ${number(edges.length)} candidate edges: the union of each household's strongest ${meta.topK ?? 12} neighbors per metric. Filters show a subset; selecting a household adds its strongest candidates. Node hue uses a quadratic scale on each side of the mean household consumption: green at the minimum, yellow at the mean, red at the maximum. Values are January mean kWh per observed half-hour, excluding missing readings. Edge width and opacity both rise linearly with |r| or MI divided by the largest candidate MI. Opacity scales differ between metrics. Complete pair results are in analysis/pairs.npz.`;
   const sourceUrl = typeof meta.source === 'string' ? meta.source : meta.source?.url || meta.sourceUrl;
   if (sourceUrl && /^https?:\/\//.test(sourceUrl)) { $('source-link').href = sourceUrl; $('source-link').hidden = false; }
   if (meta.repository && /^https?:\/\//.test(meta.repository)) $('repository-link').href = meta.repository;

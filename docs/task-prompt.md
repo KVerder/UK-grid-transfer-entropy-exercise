@@ -23,11 +23,12 @@ review-and-fix rounds, then push the HTML, code, and analysis artifacts to GitHu
 - Require at least 1,000 common observations out of 1,488 possible January slots.
 - Compute signed Pearson r; edge opacity represents its absolute magnitude and
   edge color communicates its sign.
-- Calculate MI using JIDT 1.6.1's discrete estimator after at most eight
-  per-household quantile bins, retaining equal readings in the same bin.
-  Convert JIDT's bits to nats.
-- Color nodes linearly from green to red by January mean kWh per observed
-  half-hour. Give edges fixed width and increasing opacity with strength;
+- Calculate continuous MI using JIDT KSG algorithm 1 with k=2, paired-variable
+  normalization, and seeded tiny noise for ties. Preserve its nats output and
+  negative finite-sample estimates.
+- Color nodes with a quadratic scale on each side of the mean household use,
+  from green at the minimum through yellow at the mean to red at the maximum.
+  Increase both edge width and opacity linearly with strength;
   use blue for positive correlation, yellow for negative, and purple for MI.
 - Keep unavailable scores missing. A constant series has undefined Pearson r;
   its empirical discrete MI is zero when there is sufficient overlap.

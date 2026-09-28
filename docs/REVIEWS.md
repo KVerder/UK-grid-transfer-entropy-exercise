@@ -110,3 +110,24 @@ metric switching, household selection, exact exported MI/overlap values,
 coverage states, filters, keyboard navigation, and mobile fit preservation.
 The production run independently checked 256 sampled pairs; maximum MI error
 against scikit-learn was `1.4645914314659336e-8` nats.
+
+## KSG-1 k=2 and scale revision — September 28, 2026
+
+The next default pipeline uses continuous JIDT KSG algorithm 1 with k=2,
+sample-standardized paired observations, and reproducible Gaussian tie-breaking
+noise. It keeps negative estimates and uses nats directly. Settings, source,
+library checksum, and input values determine resumable checkpoint identity.
+Eleven numerical tests passed, including independent cKDTree/digamma references,
+Gaussian theoretical MI, negative estimates, constants, and checkpoint recovery.
+All 45 first-ten-household pairs passed an end-to-end run; the maximum independent
+MI error was `1.401171090265052e-8` nats. Full-run results remain pending and are
+tracked in `docs/KSG_RUN.md`; no claim of completed full KSG validation is made.
+
+Both edge width and opacity now increase linearly with normalized strength.
+The node gradient is quadratic separately below and above the unweighted mean
+of household mean consumption, with yellow anchored at that mean. The final
+desktop and mobile views were inspected and the offline browser suite passed.
+
+The local ten-household CSV now has 1,488 timestamps and household IDs as column
+headers. Every exported value was checked against the source cells after
+collapsing ten exact duplicates; four missing readings remain blank.

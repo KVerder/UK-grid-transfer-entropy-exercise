@@ -34,37 +34,27 @@ together in the similarity layout.
 
 ## Mutual information
 
-Consumption is discretized independently for each household using up to eight
-quantile bins, estimated from that household's observed readings for the entire
-month. Repeated thresholds are collapsed, and equal readings stay in the same
-bin. The bins are fixed before intersecting a household pair's timestamps.
+The default pipeline calls JIDT 1.6.1's
+`MutualInfoCalculatorMultiVariateKraskov1` with `k=2` on continuous half-hour
+consumption. There is no binning. Each pair uses its common observed timestamps,
+standardizes each variable with its sample mean and sample standard deviation,
+and adds Gaussian tie-breaking noise of standard deviation `1e-8`. The random
+seed is `42 + pair_index`, making results reproducible across worker counts.
 
-On the pair's common timestamps, let `c[a,b]` be a joint bin count, `n` the
-overlap count, and `c[a,*]` and `c[*,b]` the two marginal counts. We compute:
+The JIDT calculator uses maximum norm and no temporal exclusion window. Its
+internal normalization and unseeded noise are disabled because preparation is
+performed explicitly by the wrapper. JIDT KSG returns **nats directly**.
+See [exact settings and provenance](JIDT.md), and [current run status](KSG_RUN.md).
 
-```text
-MI = sum over nonempty cells of (c[a,b] / n) *
-     ln(c[a,b] * n / (c[a,*] * c[*,b]))
-```
+Negative finite-sample estimates are retained in the complete archive rather
+than clipped to zero. They are not negative associations; only positive MI
+estimates are displayed as MI edges. A constant variable on the common timestamps
+has MI set to zero analytically; insufficient overlap remains NaN.
 
-Production MI is computed by the unmodified JIDT 1.6.1 library's
-`MutualInformationCalculatorDiscrete(base, base, 0)`, where `base` is the maximum
-number of bins. Each worker resets its calculator for every pair and supplies
-only the paired observations. JIDT returns **bits**, which are multiplied by
-`ln(2)` to store **nats**, matching the formula above and the existing display.
-See [JIDT setup and provenance](JIDT.md).
-
-The value is nonnegative and symmetric.
-A constant discretized series has MI zero when overlap is sufficient. This is
-the empirical contingency-table estimator, independently checked against
-[scikit-learn](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.mutual_info_score.html),
-applied to discretized consumption, not to household identifiers.
-
-This estimator can detect nonlinear dependence, but it discards within-bin
-variation and depends on the binning choice. It is not bias-corrected or
-normalized. Finite samples can yield positive MI for independent processes.
-MI and Pearson r have different scales; their numerical values and opacities
-should not be compared across toggle modes as equivalent effect sizes.
+KSG's continuous-data assumptions and tiny tie-breaking noise matter for these
+rounded meter readings. No significance test, surrogate correction, or temporal
+exclusion is performed. MI and Pearson r use different scales; visual weights
+must not be compared between modes as equivalent effect sizes.
 
 ## Positioning and display
 
@@ -75,17 +65,27 @@ consumption profiles; the generated metadata describes the exact algorithm and
 seed. Any mean filling used solely to position nodes does not enter pair metrics.
 Positions stay fixed when the edge metric changes so that comparisons are easier.
 
-Node hue varies linearly from green through yellow to red across the minimum and
-maximum household January means. The mean is kWh per observed half-hour after
-deduplication; missing readings are excluded. This is average consumption, not a
-monthly total. The legend gives the actual endpoints. A dashed outline indicates
-that a household cannot support the active metric under the coverage/variance rule.
+Node colors use each household's January mean kWh per observed half-hour after
+deduplication. Missing readings are excluded. Let `a` and `b` be the minimum
+and maximum household means, and `m` their unweighted arithmetic mean. Green is
+at `a`, yellow at `m`, and red at `b`. The normalized color coordinate is:
 
-Edges have a fixed width. Opacity is `0.04 + 0.81 * strength`, where strength is
-`abs(r)` for correlation and `MI / largest candidate MI` for mutual information.
-Zero-score edges are omitted. The MI scale is fixed across filters. Positive
-correlation is blue, negative correlation yellow, and MI purple. Selection adds
-candidate edges without drawing an edge twice or changing its opacity.
+```text
+x < m: u = 0.5 * ((x-a)/(m-a))^2
+x = m: u = 0.5
+x > m: u = 0.5 + 0.5 * ((x-m)/(b-m))^2
+hue = 120 * (1-u) degrees
+```
+
+The legend reports all three anchors. A dashed outline indicates that the
+household cannot support the active metric under the coverage/variance rule.
+
+Both edge width and opacity increase linearly with strength:
+`width = 0.25 + 3.75 * strength` pixels and
+`opacity = 0.04 + 0.81 * strength`. Strength is `abs(r)` for correlation and
+`MI / largest candidate MI` for positive MI. The scale stays fixed across
+filters. Positive correlation is blue, negative correlation yellow, and MI
+purple. Selection draws each edge once, preserving its opacity.
 
 All unordered pairs are calculated and saved separately. The HTML embeds a
 sparse union of the strongest 12 neighbors per household by absolute correlation

@@ -14,11 +14,11 @@ import warnings
 import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
-from sklearn.metrics import mutual_info_score
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from analyze import (METRIC_VERSION, compile_kernel, compute_jidt_mi, deduplicate, load_readings,
                      pair_offset, quantile_bins, select_edges, validate_pair_archive)
+from ksg import reference as reference_ksg, calculate as calculate_ksg
 
 
 class AnalysisTests(unittest.TestCase):
@@ -50,11 +50,12 @@ class AnalysisTests(unittest.TestCase):
         labels, _ = quantile_bins(values, bins)
         centered = values - np.nanmean(values, axis=1, keepdims=True)
         centered.astype("<f8").tofile(self.work / "centered.bin")
+        values.astype("<f8").tofile(self.work / "values.bin")
         labels.tofile(self.work / "bins.bin")
         subprocess.run([str(self.executable), str(self.work), str(len(values)),
                         str(values.shape[1]), str(minimum), str(bins), "2"], check=True,
                        capture_output=True)
-        compute_jidt_mi(self.work, len(values), values.shape[1], minimum, bins, 2)
+        compute_jidt_mi(self.work, len(values), values.shape[1], minimum, 2, 2)
         return (np.fromfile(self.work / "correlation.bin", dtype="<f4"),
                 np.fromfile(self.work / "mutual_information.bin", dtype="<f4"),
                 np.fromfile(self.work / "overlap.bin", dtype="<u2"), labels)
@@ -70,20 +71,20 @@ class AnalysisTests(unittest.TestCase):
                  "mutual_information": np.array([.1, .2, np.nan], dtype="f4"),
                  "overlap": np.array([1488, 1400, 999], dtype="u2"),
                  "source_sha256": np.array("abc"), "min_overlap": np.array(1000),
-                 "mi_bins": np.array(8), "metric_version": np.array(METRIC_VERSION)}
-        validate_pair_archive(cache, "abc", ids, 1000, 8)
+                 "mi_k": np.array(2), "mi_noise": np.array(1e-8), "mi_seed": np.array(42), "metric_version": np.array(METRIC_VERSION)}
+        validate_pair_archive(cache, "abc", ids, 1000, 2)
         cases = [("metric_version", np.array("old")), ("source_sha256", np.array("other")),
-                 ("min_overlap", np.array(999)), ("mi_bins", np.array(4)),
+                 ("min_overlap", np.array(999)), ("mi_k", np.array(4)), ("mi_noise", np.array(0.)), ("mi_seed", np.array(0)),
                  ("ids", ids[::-1]), ("correlation", np.ones(2, dtype="f4")),
                  ("correlation", np.ones(3, dtype="f8")),
                  ("overlap", np.array([1489, 1400, 999], dtype="u2")),
                  ("mutual_information", np.array([np.nan, .2, np.nan], dtype="f4"))]
         for key, changed in cases:
             with self.subTest(key=key), self.assertRaises(ValueError):
-                validate_pair_archive({**cache, key: changed}, "abc", ids, 1000, 8)
+                validate_pair_archive({**cache, key: changed}, "abc", ids, 1000, 2)
         del cache["metric_version"]
         with self.assertRaises(ValueError):
-            validate_pair_archive(cache, "abc", ids, 1000, 8)
+            validate_pair_archive(cache, "abc", ids, 1000, 2)
 
     def test_duplicate_policy_averages_distinct_values(self):
         frame = pd.DataFrame({"LCLid": ["a", "a", "a", "a", "b"],
@@ -140,7 +141,7 @@ class AnalysisTests(unittest.TestCase):
                     self.assertTrue(np.isnan(corr[k]))
                 else:
                     self.assertAlmostEqual(corr[k], pearsonr(a, b).statistic, places=6)
-                self.assertAlmostEqual(mi[k], mutual_info_score(labels[i, valid], labels[j, valid]), places=6)
+                self.assertAlmostEqual(mi[k], reference_ksg(a, b, k=2, seed=42+k), delta=2e-5)
         self.assertAlmostEqual(corr[pair_offset(0, 1, n)], 1)
         self.assertAlmostEqual(corr[pair_offset(0, 2, n)], -1)
         self.assertAlmostEqual(corr[pair_offset(0, 3, n)], 0, places=6)
@@ -155,11 +156,26 @@ class AnalysisTests(unittest.TestCase):
         self.assertTrue(np.isnan(corr[0]))
         self.assertEqual(mi[0], 0)
 
-    def test_jidt_bits_are_converted_to_nats(self):
-        binary = np.tile([0., 1.], 64)
-        _, mi, overlap, _ = self.kernel(np.array([binary, binary]), bins=2)
-        self.assertEqual(overlap[0], 128)
-        self.assertAlmostEqual(mi[0], np.log(2), places=6)
+    def test_ksg_matches_gaussian_mi_in_nats_and_resumes(self):
+        rng = np.random.default_rng(87)
+        x = rng.normal(size=3000)
+        y = .8*x + .6*rng.normal(size=3000)
+        values = np.array([x,y])
+        first = calculate_ksg(values, self.work, minimum=1000, k=2, threads=2)
+        self.assertAlmostEqual(first[0], -.5*np.log(1-.8**2), delta=.08)
+        second = calculate_ksg(values, self.work, minimum=1000, k=2, threads=1)
+        self.assertTrue(np.array_equal(first, second))
+        self.assertAlmostEqual(first[0], reference_ksg(x,y,k=2), delta=2e-5)
+
+    def test_ksg_negative_estimates_are_retained(self):
+        rng = np.random.default_rng(52)
+        values = rng.normal(size=(8,256))
+        result = calculate_ksg(values, self.work, minimum=80, k=2, threads=2)
+        self.assertTrue(np.any(result < 0))
+        for i in range(8):
+            for j in range(i+1,8):
+                position = pair_offset(i,j,8)
+                self.assertAlmostEqual(result[position], reference_ksg(values[i],values[j],k=2,seed=42+position), delta=2e-5)
 
     def test_kernel_rejects_invalid_binary_inputs(self):
         np.arange(20, dtype="<f8").tofile(self.work / "centered.bin")

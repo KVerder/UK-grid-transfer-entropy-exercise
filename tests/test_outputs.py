@@ -1,5 +1,6 @@
 """Checks on the delivered all-pair archive and sparse display data."""
 import json
+import os
 from pathlib import Path
 import sys
 import unittest
@@ -7,6 +8,7 @@ import unittest
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
+DATA_ROOT = Path(os.environ.get("ANALYSIS_DIR", ROOT / "analysis"))
 sys.path.insert(0, str(ROOT / "scripts"))
 from lookup_pair import pair_index
 
@@ -24,12 +26,12 @@ class PairIndexTests(unittest.TestCase):
                 pair_index(*pair, 4)
 
 
-@unittest.skipUnless((ROOT / "analysis/network.json").exists(), "Generate analysis artifacts first")
+@unittest.skipUnless((DATA_ROOT / "network.json").exists(), "Generate analysis artifacts first")
 class DeliveredOutputTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.network = json.loads((ROOT / "analysis/network.json").read_text())
-        with np.load(ROOT / "analysis/pairs.npz", allow_pickle=False) as data:
+        cls.network = json.loads((DATA_ROOT / "network.json").read_text())
+        with np.load(DATA_ROOT / "pairs.npz", allow_pickle=False) as data:
             cls.ids = data["ids"].tolist()
             cls.r = data["correlation"]
             cls.mi = data["mutual_information"]
@@ -38,16 +40,23 @@ class DeliveredOutputTests(unittest.TestCase):
     def test_full_population_and_score_domains(self):
         self.assertEqual(self.network["meta"]["miLibrary"], "JIDT")
         self.assertEqual(self.network["meta"]["miLibraryVersion"], "1.6.1")
-        self.assertEqual(self.network["meta"]["miNativeUnit"], "bits")
         self.assertEqual(self.network["meta"]["miUnit"], "nats")
+        if self.network["meta"].get("miAlgorithm") == 1:
+            self.assertEqual(self.network["meta"]["miNativeUnit"], "nats")
+            self.assertEqual(self.network["meta"]["miK"], 2)
+        else:
+            self.assertEqual(self.network["meta"]["miNativeUnit"], "bits")
         n = len(self.ids)
         self.assertEqual(len(self.r), n * (n - 1) // 2)
         self.assertEqual(len(self.r), len(self.mi))
         self.assertEqual(len(self.r), len(self.overlap))
         self.assertEqual(self.ids, [x["id"] for x in self.network["nodes"]])
         self.assertTrue(np.all(np.abs(self.r[np.isfinite(self.r)]) <= 1))
-        self.assertTrue(np.all(self.mi[np.isfinite(self.mi)] >= 0))
-        self.assertTrue(np.all(self.mi[np.isfinite(self.mi)] <= np.log(8) + 1e-6))
+        if self.network["meta"].get("miAlgorithm") != 1:
+            self.assertTrue(np.all(self.mi[np.isfinite(self.mi)] >= 0))
+            self.assertTrue(np.all(self.mi[np.isfinite(self.mi)] <= np.log(8) + 1e-6))
+        else:
+            self.assertFalse(np.isinf(self.mi).any())
         enough = self.overlap >= self.network["meta"]["minOverlap"]
         self.assertTrue(np.array_equal(np.isfinite(self.mi), enough))
         self.assertTrue(np.all(~np.isfinite(self.r[~enough])))
