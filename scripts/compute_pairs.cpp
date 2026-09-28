@@ -1,4 +1,4 @@
-// Exact all-pair Pearson correlation and empirical discrete mutual information.
+// All-pair Pearson correlation and overlap counts. MI is computed separately by JIDT.
 // Build: g++ -O3 -std=c++17 -fopenmp scripts/compute_pairs.cpp -o work/compute_pairs
 #include <algorithm>
 #include <cmath>
@@ -49,19 +49,15 @@ int main(int argc, char** argv) {
     }
     const size_t P = size_t(N)*(N-1)/2;
     const float nan = std::numeric_limits<float>::quiet_NaN();
-    std::vector<float> corr(P, nan), mi(P, nan);
+    std::vector<float> corr(P, nan);
     std::vector<uint16_t> counts(P, 0);
     // Each iteration owns one contiguous part of the upper triangle.
 #pragma omp parallel for schedule(dynamic, 4)
     for (int i = 0; i < N-1; ++i) {
-        std::vector<int> joint(B*B), rows(B), cols(B);
         const double* x = data.data()+size_t(i)*T;
         const int8_t* xb = bins.data()+size_t(i)*T;
         size_t k = size_t(i)*(2*size_t(N)-i-1)/2;
         for (int j=i+1; j<N; ++j, ++k) {
-            std::fill(joint.begin(), joint.end(), 0);
-            std::fill(rows.begin(), rows.end(), 0);
-            std::fill(cols.begin(), cols.end(), 0);
             const double* y = data.data()+size_t(j)*T;
             const int8_t* yb = bins.data()+size_t(j)*T;
             int n=0;
@@ -74,7 +70,7 @@ int main(int argc, char** argv) {
                 const double dx=x[t]-origin_x, dy=y[t]-origin_y;
                 variable_x = variable_x || dx != 0;
                 variable_y = variable_y || dy != 0;
-                ++n; ++joint[a*B+b];
+                ++n;
                 sx+=dx; sy+=dy;
                 xx+=dx*dx; yy+=dy*dy; xy+=dx*dy;
             }
@@ -83,21 +79,11 @@ int main(int argc, char** argv) {
             const double vx=xx-sx*sx/n, vy=yy-sy*sy/n;
             if (variable_x && variable_y && vx > 0 && vy > 0)
                 corr[k]=float(std::clamp((xy-sx*sy/n)/std::sqrt(vx*vy), -1.0, 1.0));
-            for (int a=0; a<B; ++a) for(int b=0; b<B; ++b) {
-                rows[a]+=joint[a*B+b]; cols[b]+=joint[a*B+b];
-            }
-            double information=0;
-            for (int a=0; a<B; ++a) for (int b=0; b<B; ++b) {
-                const int c=joint[a*B+b];
-                if (c) information+=(double(c)/n)*std::log(double(c)*n/(double(rows[a])*cols[b]));
-            }
-            mi[k]=float(std::max(0.0,information));
         }
     }
     write_array(dir+"/correlation.bin",corr);
-    write_array(dir+"/mutual_information.bin",mi);
     write_array(dir+"/overlap.bin",counts);
-    std::cout << "Computed " << P << " pairs" << std::endl;
+    std::cout << "Computed Pearson and overlap for " << P << " pairs" << std::endl;
   } catch(const std::exception& e) {
     std::cerr << e.what() << std::endl; return 1;
   }

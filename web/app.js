@@ -10,7 +10,17 @@
   const number = value => Number(value || 0).toLocaleString('en-GB');
   const compact = value => Number(value || 0) >= 1e6 ? `${(value / 1e6).toFixed(2)}m` : number(value);
   const safePositive = value => finite(value) && value > 0;
-  const colors = { r: '#278573', negative: '#c57844', mi: '#8061ae', node: '#558e77', muted: '#c1cbbd', ink: '#143f31' };
+  const colors = { r: '#2563eb', negative: '#eab308', mi: '#8061ae', muted: '#c1cbbd', ink: '#143f31' };
+  const observedMeans = nodes.map(node => node.mean).filter(finite);
+  const minMean = observedMeans.length ? Math.min(...observedMeans) : 0;
+  const maxMean = observedMeans.length ? Math.max(...observedMeans) : 0;
+  // Linear scale of mean observed half-hour consumption, shared by both edge modes.
+  const consumptionColor = value => {
+    if (!finite(value)) return colors.muted;
+    const fraction = maxMean > minMean ? Math.max(0, Math.min(1, (value - minMean) / (maxMean - minMean))) : 0.5;
+    return `hsl(${120 * (1 - fraction)}, 72%, 40%)`;
+  };
+  const nodeColors = nodes.map(node => consumptionColor(node.mean));
   const nodeById = new Map(nodes.map((node, index) => [String(node.id).toUpperCase(), index]));
   const adjacency = Array.from({ length: nodes.length }, () => []);
   edges.forEach(edge => {
@@ -105,7 +115,7 @@
     requestAnimationFrame(() => { renderQueued = false; draw(); });
   }
 
-  function drawEdge(edge, emphasized) {
+  function drawEdge(edge) {
     const a = screenPoint(edge.s), b = screenPoint(edge.t);
     if ((a.x < -10 && b.x < -10) || (a.x > width + 10 && b.x > width + 10) || (a.y < -10 && b.y < -10) || (a.y > height + 10 && b.y > height + 10)) return;
     const strength = metric === 'r' ? Math.abs(edge.r) : edge.mi / maxMi;
@@ -113,16 +123,16 @@
     if (!(strength > 0)) return;
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
     ctx.strokeStyle = edgeColor(edge);
-    ctx.globalAlpha = emphasized ? 0.78 : selected === null ? 0.11 : 0.026;
-    ctx.lineWidth = (0.22 + 2.8 * strength) * (emphasized ? 1.1 : 1);
+    ctx.globalAlpha = 0.04 + 0.81 * Math.min(1, strength);
+    ctx.lineWidth = 1;
     ctx.stroke();
   }
 
   function draw() {
     ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     ctx.clearRect(0, 0, width, height);
-    globalEdges.forEach(edge => drawEdge(edge, false));
-    selectionEdges.forEach(edge => drawEdge(edge, true));
+    // Draw each edge once so selection cannot artificially increase its opacity.
+    lastRenderedEdges.forEach(drawEdge);
     const zoom = Math.min(2, Math.max(0.8, view.scale / fitScale));
     nodes.forEach((node, index) => {
       if (index === selected || index === hovered || selectionNeighbors.has(index)) return;
@@ -130,21 +140,21 @@
       if (p.x < -6 || p.y < -6 || p.x > width + 6 || p.y > height + 6) return;
       const eligible = isEligible(index);
       ctx.beginPath(); ctx.arc(p.x, p.y, (eligible ? 1.65 : 1.9) * zoom, 0, Math.PI * 2);
-      ctx.globalAlpha = selected !== null ? 0.2 : eligible ? 0.72 : 0.65;
-      if (eligible) { ctx.fillStyle = colors.node; ctx.fill(); }
-      else { ctx.strokeStyle = '#a3b1a0'; ctx.lineWidth = 0.8; ctx.stroke(); }
+      ctx.globalAlpha = selected !== null ? 0.3 : 0.92;
+      ctx.fillStyle = nodeColors[index]; ctx.fill();
+      if (!eligible) { ctx.strokeStyle = colors.ink; ctx.lineWidth = 0.8; ctx.setLineDash([1, 1]); ctx.stroke(); ctx.setLineDash([]); }
     });
     selectionNeighbors.forEach(index => {
       const p = screenPoint(index);
       ctx.beginPath(); ctx.arc(p.x, p.y, 3.3 * zoom, 0, Math.PI * 2);
-      ctx.globalAlpha = 1; ctx.fillStyle = '#fcfcf8'; ctx.fill(); ctx.strokeStyle = metric === 'mi' ? colors.mi : colors.r; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.globalAlpha = 1; ctx.fillStyle = nodeColors[index]; ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
     });
     [hovered, selected].forEach(index => {
       if (index === null) return;
       const p = screenPoint(index);
       ctx.globalAlpha = 1;
       ctx.beginPath(); ctx.arc(p.x, p.y, 8 * zoom, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
-      ctx.beginPath(); ctx.arc(p.x, p.y, 5 * zoom, 0, Math.PI * 2); ctx.fillStyle = colors.ink; ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x, p.y, 5 * zoom, 0, Math.PI * 2); ctx.fillStyle = nodeColors[index]; ctx.fill();
       ctx.font = '600 10px "Segoe UI", Arial, sans-serif';
       const text = String(nodes[index].id), labelWidth = ctx.measureText(text).width;
       const tx = Math.min(width - labelWidth - 8, Math.max(8, p.x + 13 * zoom));
@@ -203,7 +213,7 @@
     if (index === null) return;
     tooltip.replaceChildren(document.createTextNode(String(nodes[index].id)), document.createElement('br'));
     const detail = document.createElement('span');
-    detail.textContent = `${finite(nodes[index].coverage) ? (nodes[index].coverage * 100).toFixed(1) : '—'}% coverage · click to explore`;
+    detail.textContent = `${finite(nodes[index].mean) ? nodes[index].mean.toFixed(3) + ' kWh / half hour · ' : ''}${finite(nodes[index].coverage) ? (nodes[index].coverage * 100).toFixed(1) : '—'}% coverage · click to explore`;
     tooltip.appendChild(detail);
     tooltip.style.left = `${Math.min(width - tooltip.offsetWidth - 8, Math.max(8, x + 15))}px`;
     tooltip.style.top = `${Math.min(height - tooltip.offsetHeight - 8, Math.max(8, y + 15))}px`;
@@ -311,11 +321,11 @@
     $('threshold-label').textContent = metric === 'r' ? '|r|' : 'MI';
     $('metric-kicker').textContent = metric === 'r' ? 'READING CORRELATION' : 'READING MUTUAL INFORMATION';
     $('metric-description').textContent = metric === 'r'
-      ? 'Pearson r measures linear co-movement. Color shows the sign; thickness shows its magnitude. Shared routines can produce similar patterns.'
-      : 'Mutual information detects dependence beyond a straight-line relationship. Thicker purple edges mean more shared information, measured in nats. It has no positive or negative sign.';
+      ? 'Blue edges show positive correlation; yellow edges show negative correlation. Higher absolute correlation makes an edge more opaque. Shared routines can produce similar patterns.'
+      : 'Mutual information detects dependence beyond a straight-line relationship. More opaque purple edges mean higher MI, measured in nats. It has no positive or negative sign.';
     $('graph-legend').innerHTML = metric === 'r'
-      ? '<span><i class="legend-line positive"></i>Positive</span><span><i class="legend-line negative"></i>Negative</span><span class="legend-weight">Thicker = stronger |r|</span>'
-      : '<span><i class="legend-line mi"></i>Mutual information</span><span class="legend-weight">Thicker = more MI · nats</span>';
+      ? '<span><i class="legend-line positive"></i>Positive</span><span><i class="legend-line negative"></i>Negative</span><span class="legend-weight">More opaque = stronger |r|</span>'
+      : '<span><i class="legend-line mi"></i>Mutual information</span><span class="legend-weight">More opaque = higher MI · nats</span>';
     $('limited-node-legend').textContent = metric === 'r' ? 'Correlation unavailable' : 'MI unavailable';
     updateVisibleEdges(); if (selected !== null) { renderSelectedStatus(); renderNeighbors(); }
     announce(`Edges now show ${metric === 'r' ? 'Pearson correlation' : 'mutual information in nats'}. Household positions are unchanged.`);
@@ -391,10 +401,13 @@
   $('pair-count').textContent = compact(meta.pairCount ?? nodes.length * (nodes.length - 1) / 2);
   $('reading-count').textContent = number(meta.timestampCount ?? meta.timeSlots ?? meta.slotCount ?? 1488);
   $('limited-node-legend').textContent = 'Correlation unavailable';
+  $('consumption-min').textContent = minMean.toFixed(3);
+  $('consumption-max').textContent = maxMean.toFixed(3);
+  $('node-color-legend').title = `Linear scale from ${minMean.toFixed(3)} to ${maxMean.toFixed(3)} kWh per observed half-hour. Missing readings are excluded from the January mean. Green is lowest; red is highest.`;
   $('method-data').textContent = `January 1–31, 2014; ${number(nodes.length)} households, ${number(meta.timestampCount ?? meta.timeSlots ?? meta.slotCount ?? 1488)} half-hour slots, ${number(meta.pairCount ?? nodes.length * (nodes.length - 1) / 2)} unordered household pairs evaluated. UK Power Networks Low Carbon London smart-meter data from the London Datastore.`;
   $('method-cleaning').textContent = `Duplicate household/timestamp readings are resolved before analysis. Metrics use only jointly available timestamps, with a minimum of ${number(meta.minOverlap ?? 1000)} paired readings. Missing values are not imputed for either metric. Coverage describes available half-hour slots.`;
-  $('method-metrics').textContent = `Pearson correlation uses raw half-hour kWh. Mutual information is empirical discrete MI in nats, using up to ${meta.miBins ?? 8} household-global quantile bins with ties kept together. MI is not bias-corrected and small positive values need not indicate substantive dependence. Constant series have undefined correlation.`;
-  $('method-network').textContent = `All household pairs are evaluated in the analysis, but this HTML contains a sparse union of the strongest ${meta.topK ?? 12} neighbor candidates per household for each metric (${number(edges.length)} candidate edges). Threshold and edge limit show a subset; a selected household adds its strongest available candidates independently. Edge widths use |r| or raw MI within each view, so widths are not comparable across metrics. Complete pair results are in analysis/pairs.npz in the repository.`;
+  $('method-metrics').textContent = `Pearson correlation uses raw half-hour kWh. Mutual information is calculated with JIDT ${meta.miLibraryVersion ?? "1.6.1"} (discrete estimator, bits converted to nats), using up to ${meta.miBins ?? 8} household-global quantile bins with ties kept together. MI is not bias-corrected and small positive values need not indicate substantive dependence. Constant series have undefined correlation.`;
+  $('method-network').textContent = `All household pairs are evaluated, but this HTML contains ${number(edges.length)} candidate edges: the union of each household's strongest ${meta.topK ?? 12} neighbors per metric. Filters show a subset; selecting a household adds its strongest candidates. Node hue runs linearly from green to red by January mean kWh per observed half-hour, excluding missing readings. Edges have fixed width; opacity rises with |r| or MI divided by the largest candidate MI. Opacity scales differ between metrics. Complete pair results are in analysis/pairs.npz.`;
   const sourceUrl = typeof meta.source === 'string' ? meta.source : meta.source?.url || meta.sourceUrl;
   if (sourceUrl && /^https?:\/\//.test(sourceUrl)) { $('source-link').href = sourceUrl; $('source-link').hidden = false; }
   if (meta.repository && /^https?:\/\//.test(meta.repository)) $('repository-link').href = meta.repository;

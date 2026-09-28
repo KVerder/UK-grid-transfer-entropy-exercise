@@ -7,6 +7,9 @@ It contains its own code and display data and works offline. GitHub's file page
 shows the HTML source; use **Download raw file** and open the downloaded file.
 
 - Toggle Pearson correlation and mutual information to change edge weights.
+- Node color shows January mean kWh per observed half-hour, from green (lowest)
+  to red (highest). Stronger edges are more opaque: blue for positive correlation,
+  yellow for negative correlation, and purple for mutual information.
 - Search any household ID, inspect its retained strongest connections, and
   compare its daily consumption profile.
 - Pan, zoom, change the edge threshold or edge limit, and export visible edges.
@@ -20,7 +23,12 @@ and [three review rounds](docs/REVIEWS.md). The original source CSV is preserved
 ### Reproduce
 
 Prerequisites: Python 3.11 or newer, a C++17 compiler (`g++` or `clang++` on PATH),
-and Git LFS. An OpenMP-capable compiler speeds up the all-pair computation.
+a Java JDK 11 or newer (`java` and `javac` on PATH), and Git LFS.
+An OpenMP-capable compiler speeds up Pearson computation. MI is calculated by
+JIDT 1.6.1's `MutualInformationCalculatorDiscrete`, using up to eight quantile
+bins. The first run downloads the official JIDT release and verifies pinned
+SHA-256 checksums; subsequent runs use the verified local jar. See
+[JIDT provenance and setup](docs/JIDT.md).
 
 ```sh
 git lfs install

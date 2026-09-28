@@ -27,8 +27,8 @@ association and lies between -1 and +1. A series that is constant on the common
 observations has undefined correlation, stored as NaN rather than zero.
 See the [SciPy Pearson reference](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.pearsonr.html).
 
-In the network, edge thickness represents absolute r. Teal denotes positive
-correlation and orange denotes negative correlation. The signed number remains
+In the network, edge opacity represents absolute r. Blue denotes positive
+correlation and yellow denotes negative correlation. The signed number remains
 visible in details and exports. Negative correlation does not attract nodes
 together in the similarity layout.
 
@@ -47,16 +47,23 @@ MI = sum over nonempty cells of (c[a,b] / n) *
      ln(c[a,b] * n / (c[a,*] * c[*,b]))
 ```
 
-Natural logarithms give units of **nats**. The value is nonnegative and symmetric.
+Production MI is computed by the unmodified JIDT 1.6.1 library's
+`MutualInformationCalculatorDiscrete(base, base, 0)`, where `base` is the maximum
+number of bins. Each worker resets its calculator for every pair and supplies
+only the paired observations. JIDT returns **bits**, which are multiplied by
+`ln(2)` to store **nats**, matching the formula above and the existing display.
+See [JIDT setup and provenance](JIDT.md).
+
+The value is nonnegative and symmetric.
 A constant discretized series has MI zero when overlap is sufficient. This is
-the empirical contingency-table estimator documented by
+the empirical contingency-table estimator, independently checked against
 [scikit-learn](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.mutual_info_score.html),
 applied to discretized consumption, not to household identifiers.
 
 This estimator can detect nonlinear dependence, but it discards within-bin
 variation and depends on the binning choice. It is not bias-corrected or
 normalized. Finite samples can yield positive MI for independent processes.
-MI and Pearson r have different scales; their numerical values and line widths
+MI and Pearson r have different scales; their numerical values and opacities
 should not be compared across toggle modes as equivalent effect sizes.
 
 ## Positioning and display
@@ -67,6 +74,18 @@ coordinates, not a geographic map**. The layout groups similar standardized
 consumption profiles; the generated metadata describes the exact algorithm and
 seed. Any mean filling used solely to position nodes does not enter pair metrics.
 Positions stay fixed when the edge metric changes so that comparisons are easier.
+
+Node hue varies linearly from green through yellow to red across the minimum and
+maximum household January means. The mean is kWh per observed half-hour after
+deduplication; missing readings are excluded. This is average consumption, not a
+monthly total. The legend gives the actual endpoints. A dashed outline indicates
+that a household cannot support the active metric under the coverage/variance rule.
+
+Edges have a fixed width. Opacity is `0.04 + 0.81 * strength`, where strength is
+`abs(r)` for correlation and `MI / largest candidate MI` for mutual information.
+Zero-score edges are omitted. The MI scale is fixed across filters. Positive
+correlation is blue, negative correlation yellow, and MI purple. Selection adds
+candidate edges without drawing an edge twice or changing its opacity.
 
 All unordered pairs are calculated and saved separately. The HTML embeds a
 sparse union of the strongest 12 neighbors per household by absolute correlation

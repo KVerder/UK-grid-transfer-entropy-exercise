@@ -77,3 +77,36 @@ correlations; 12,848,727 finite MI scores; 106,308 sparse candidate edges.
 The source's 5,061 extra readings were exact duplicates; there were no conflicting
 household/timestamp values. The analysis retains nine constant households and
 38 households below the coverage rule.
+
+## JIDT and visual encoding update — September 28, 2026
+
+Replaced production MI with the checksum-pinned, unmodified JIDT 1.6.1 discrete
+calculator. The C++ kernel now computes only Pearson correlation and overlap.
+The previous quantile bins and paired-observation rule remain unchanged. JIDT's
+bits are converted to nats, and the cache version prevents reuse of results from
+the old implementation. See `docs/JIDT.md` for setup and provenance.
+
+Every one of the 12,848,727 finite recomputed MI scores matched the previous
+float32 values exactly; unavailable-score masks, Pearson values, overlap counts,
+and household ordering were also unchanged. The known one-bit example returned
+`ln(2)` nats, and independent nonlinear, constant, and missing-data checks passed.
+
+Nodes now use a linear green-to-red scale of January mean kWh per observed
+half-hour. Edges have fixed width and strength-dependent opacity; correlation
+uses blue for positive and yellow for negative values, while MI remains purple.
+Selection no longer draws an edge twice, preserving its encoded opacity.
+Desktop and mobile previews were inspected, including the numeric consumption
+legend and absence of mobile horizontal overflow.
+
+Windows denied removal of generated test executables after numerical assertions
+passed. Test artifacts now stay in the ignored `work/test-runs` directory;
+cleanup retries before emitting an explicit Windows-only warning if removal
+still fails. Numerical or artifact assertion failures remain fatal.
+
+Final validation of the update: all 15 Python numerical/artifact tests passed.
+The final regenerated HTML passed the offline browser integration suite with
+zero runtime errors, no remote requests, and no mobile overflow. Tests verified
+metric switching, household selection, exact exported MI/overlap values,
+coverage states, filters, keyboard navigation, and mobile fit preservation.
+The production run independently checked 256 sampled pairs; maximum MI error
+against scikit-learn was `1.4645914314659336e-8` nats.

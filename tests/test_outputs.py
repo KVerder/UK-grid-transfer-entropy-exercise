@@ -36,6 +36,10 @@ class DeliveredOutputTests(unittest.TestCase):
             cls.overlap = data["overlap"]
 
     def test_full_population_and_score_domains(self):
+        self.assertEqual(self.network["meta"]["miLibrary"], "JIDT")
+        self.assertEqual(self.network["meta"]["miLibraryVersion"], "1.6.1")
+        self.assertEqual(self.network["meta"]["miNativeUnit"], "bits")
+        self.assertEqual(self.network["meta"]["miUnit"], "nats")
         n = len(self.ids)
         self.assertEqual(len(self.r), n * (n - 1) // 2)
         self.assertEqual(len(self.r), len(self.mi))

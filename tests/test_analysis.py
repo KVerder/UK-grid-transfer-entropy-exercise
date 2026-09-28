@@ -3,10 +3,13 @@
 Run: python -m unittest discover -s tests -p "test_analysis*.py" -v
 """
 from pathlib import Path
+import os
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -14,20 +17,34 @@ from scipy.stats import pearsonr
 from sklearn.metrics import mutual_info_score
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from analyze import (METRIC_VERSION, compile_kernel, deduplicate, load_readings,
+from analyze import (METRIC_VERSION, compile_kernel, compute_jidt_mi, deduplicate, load_readings,
                      pair_offset, quantile_bins, select_edges, validate_pair_archive)
 
 
 class AnalysisTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.temp = tempfile.TemporaryDirectory()
+        # Keep compiled test artifacts in the repository's ignored workspace.
+        test_runs = Path(__file__).resolve().parents[1] / "work/test-runs"
+        test_runs.mkdir(parents=True, exist_ok=True)
+        cls.temp = tempfile.TemporaryDirectory(dir=test_runs)
         cls.work = Path(cls.temp.name)
         cls.executable = compile_kernel(cls.work)
 
     @classmethod
     def tearDownClass(cls):
-        cls.temp.cleanup()
+        # Retry if Windows denies removal of a just-executed test binary.
+        for attempt in range(5):
+            try:
+                cls.temp.cleanup()
+                return
+            except PermissionError:
+                if attempt == 4:
+                    if os.name == "nt":
+                        warnings.warn(f"Windows retained test artifacts in {cls.work}; numerical checks are unaffected")
+                        return
+                    raise
+                time.sleep(0.2 * 2**attempt)
 
     def kernel(self, values, minimum=80, bins=8):
         labels, _ = quantile_bins(values, bins)
@@ -37,6 +54,7 @@ class AnalysisTests(unittest.TestCase):
         subprocess.run([str(self.executable), str(self.work), str(len(values)),
                         str(values.shape[1]), str(minimum), str(bins), "2"], check=True,
                        capture_output=True)
+        compute_jidt_mi(self.work, len(values), values.shape[1], minimum, bins, 2)
         return (np.fromfile(self.work / "correlation.bin", dtype="<f4"),
                 np.fromfile(self.work / "mutual_information.bin", dtype="<f4"),
                 np.fromfile(self.work / "overlap.bin", dtype="<u2"), labels)
@@ -136,6 +154,12 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(overlap[0], 1000)
         self.assertTrue(np.isnan(corr[0]))
         self.assertEqual(mi[0], 0)
+
+    def test_jidt_bits_are_converted_to_nats(self):
+        binary = np.tile([0., 1.], 64)
+        _, mi, overlap, _ = self.kernel(np.array([binary, binary]), bins=2)
+        self.assertEqual(overlap[0], 128)
+        self.assertAlmostEqual(mi[0], np.log(2), places=6)
 
     def test_kernel_rejects_invalid_binary_inputs(self):
         np.arange(20, dtype="<f8").tofile(self.work / "centered.bin")

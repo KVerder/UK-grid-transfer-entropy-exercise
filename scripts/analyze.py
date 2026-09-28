@@ -1,7 +1,7 @@
 """Reproduce the January 2014 London household network, including every pair.
 
 Run from the repository root: python scripts/analyze.py
-A C++17 compiler with optional OpenMP is required for a fresh computation.
+A C++17 compiler and a JDK (java and javac on PATH) are required for a fresh computation.
 """
 from __future__ import annotations
 
@@ -16,12 +16,13 @@ import time
 
 import numpy as np
 import pandas as pd
+from setup_jidt import ensure_jidt, JAR_SHA256, VERSION as JIDT_VERSION
 
 ROOT = Path(__file__).resolve().parents[1]
 PERIOD_START = "2014-01-01"
 PERIOD_END = "2014-02-01"
 SOURCE = "https://data.london.gov.uk/dataset/smartmeter-energy-consumption-data-in-london-households-vqm0d"
-METRIC_VERSION = "pearson-pairshift-empirical-quantile-v1"
+METRIC_VERSION = "pearson-pairshift-jidt-1.6.1-discrete-quantile-nats-v2"
 
 
 def pair_offset(i: int | np.ndarray, j: int | np.ndarray, n: int):
@@ -136,6 +137,20 @@ def reference_pair(x, y, bx, by, minimum=1000, max_bins=8):
     return r, max(0., mi), n
 
 
+def compute_jidt_mi(work: Path, households: int, timestamps: int, minimum: int, max_bins: int, threads: int):
+    java, javac = shutil.which("java"), shutil.which("javac")
+    if not java or not javac:
+        raise RuntimeError("Install a Java JDK (11 or newer), with java and javac on PATH")
+    jar = ensure_jidt()
+    classes = work / "java-classes"
+    classes.mkdir(parents=True, exist_ok=True)
+    subprocess.run([javac, "-encoding", "UTF-8", "-cp", str(jar), "-d", str(classes),
+                    str(ROOT / "scripts/JidtPairMI.java")], check=True)
+    subprocess.run([java, "-Xmx2g", "-cp", os.pathsep.join([str(classes), str(jar)]),
+                    "JidtPairMI", str(work), str(households), str(timestamps),
+                    str(minimum), str(max_bins), str(threads)], check=True)
+
+
 def compute_pairs(values, bins, work: Path, minimum: int, max_bins: int, threads: int):
     centered = values - np.nanmean(values, axis=1, keepdims=True)
     # Center once for numerical stability; kernel still recenters each intersection.
@@ -144,6 +159,7 @@ def compute_pairs(values, bins, work: Path, minimum: int, max_bins: int, threads
     executable = compile_kernel(work)
     subprocess.run([str(executable), str(work), str(len(values)), str(values.shape[1]),
                     str(minimum), str(max_bins), str(threads)], check=True)
+    compute_jidt_mi(work, len(values), values.shape[1], minimum, max_bins, threads)
     return (np.fromfile(work / "correlation.bin", dtype="<f4"),
             np.fromfile(work / "mutual_information.bin", dtype="<f4"),
             np.fromfile(work / "overlap.bin", dtype="<u2"))
@@ -348,7 +364,9 @@ def main():
             "constantHouseholds": int((variances == 0).sum()),
             "householdsBelowMinOverlap": int((counts < args.min_overlap).sum()),
             "minOverlap": args.min_overlap, "miBins": args.mi_bins, "miUnit": "nats",
-            "miEstimator": "Empirical plug-in MI of tied-value-preserving per-household quantile bins",
+            "miEstimator": "JIDT MutualInformationCalculatorDiscrete on tied-value-preserving per-household quantile bins",
+            "miLibrary": "JIDT", "miLibraryVersion": JIDT_VERSION, "miLibraryJarSha256": JAR_SHA256,
+            "miNativeUnit": "bits", "miUnitConversion": "JIDT bits multiplied by ln(2) to store nats",
             "metricVersion": METRIC_VERSION,
             "layout": "similarity", "layoutMethod": "Seeded t-SNE on 32 SVD components of centered unit-length series",
             "locationAvailable": False,
