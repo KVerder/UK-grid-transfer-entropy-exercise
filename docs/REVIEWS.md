@@ -158,3 +158,14 @@ original coordinates and fitted zoom while retaining filters and selection.
 Clustering tests check strong groups, weak cross-links, negative correlations,
 unlinked nodes, finite geometry, and determinism. Full browser checks exercise
 both layouts, exact reset, preserved controls, and tablet/mobile behavior.
+
+## 2026-09-28: median-anchored opacity and thickness controls
+
+Added exactly two range controls, remembered independently for MI and |r|.
+Tests verify fixed median and sub-median appearances, maximum opacity=x^2 times
+median opacity, maximum width=y^2 times median width, the physical opacity bound,
+metric switching, and invariance under filters/grouping. Existing touch checks
+were corrected to release the intended finger in CDP before testing continued
+one-finger pan. Grouping/reset and browser regressions are included. Existing
+layouts can be reused when input nodes/edges match, avoiding unnecessary layout
+recomputation during styling changes; --rebuild-layouts forces fresh grouping.

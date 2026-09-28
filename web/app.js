@@ -134,6 +134,54 @@
     const q = maxMi > meanMi ? Math.pow(Math.min(1, (value - meanMi) / (maxMi - meanMi)), 2) : 0;
     return { width: 1.5 + 1.5 * q, opacity: 0.7 + 0.3 * q };
   }
+  const medianOf = values => {
+    values.sort((a,b) => a-b);
+    const n = values.length;
+    return n ? n % 2 ? values[(n-1)/2] : (values[n/2-1]+values[n/2])/2 : 0;
+  };
+  // Fixed across filtering/grouping; preserve each metric's previous median style.
+  const medianR = medianOf(edges.filter(e => finite(e.r)).map(e => Math.abs(e.r)));
+  const medianMi = medianOf(candidateMi.map(e => e.mi));
+  const scaleAnchors = {
+    r: { median: medianR, max: sorted.r.length ? Math.abs(sorted.r[0].r) : 1, opacity: 0.04+0.81*medianR, width: 0.25+3.75*medianR },
+    mi: { median: medianMi, max: maxMi, ...miStyle(medianMi) }
+  };
+  const edgeScales = {};
+  for (const key of ['r','mi']) {
+    const a = scaleAnchors[key];
+    // No positive median: retain a defined baseline for degenerate datasets.
+    if (!(a.opacity > 0)) a.opacity = 0.7;
+    if (!(a.width > 0)) a.width = 1.5;
+    const oldMax = key === 'mi' ? miStyle(a.max) : {opacity:0.04+0.81*a.max,width:0.25+3.75*a.max};
+    edgeScales[key] = { x: Math.sqrt(oldMax.opacity/a.opacity), y: Math.sqrt(oldMax.width/a.width) };
+  }
+  function scaledEdgeStyle(value, key = metric) {
+    if (!(value > 0)) return {width:0,opacity:0};
+    const a = scaleAnchors[key], control = edgeScales[key];
+    if (a.median > 0 && value <= a.median) {
+      const q = (value/a.median)**2;
+      return {opacity:a.opacity*q,width:a.width*q};
+    }
+    const q = a.max > a.median ? Math.min(1,(value-a.median)/(a.max-a.median))**2 : 0;
+    return {opacity: Math.min(1,a.opacity*(1+(control.x**2-1)*q)), width:a.width*(1+(control.y**2-1)*q)};
+  }
+  function updateScaleControls() {
+    const a = scaleAnchors[metric], control = edgeScales[metric];
+    $('opacity-scale').max = String(Math.sqrt(1/a.opacity));
+    $('opacity-scale').value = String(control.x); $('width-scale').value = String(control.y);
+    $('opacity-scale-output').textContent = control.x.toFixed(2);
+    $('width-scale-output').textContent = control.y.toFixed(2);
+    const maxOpacity = Math.min(1,a.opacity*control.x**2), maxWidth = a.width*control.y**2;
+    $('opacity-scale-note').textContent = `Max = x² × median = ${(maxOpacity*100).toFixed(1)}%`;
+    $('width-scale-note').textContent = `Max = y² × median = ${maxWidth.toFixed(2)} px`;
+    $('edge-scale-anchor').textContent = `Fixed median ${metric === 'r' ? '|r|' : 'MI'} ${a.median.toFixed(4)}${metric === 'mi' ? ' nats' : ''}: ${(a.opacity*100).toFixed(1)}% opacity · ${a.width.toFixed(2)} px. Sliders affect values above the median.`;
+    $('opacity-scale').setAttribute('aria-valuetext', `x ${control.x.toFixed(2)}; maximum opacity ${(maxOpacity*100).toFixed(1)} percent`);
+    $('width-scale').setAttribute('aria-valuetext', `y ${control.y.toFixed(2)}; maximum thickness ${maxWidth.toFixed(2)} pixels`);
+    $('graph-legend').innerHTML = (metric === 'r' ? '<span><i class="legend-line positive"></i>Positive</span><span><i class="legend-line negative"></i>Negative</span>' : '<span><i class="legend-line mi"></i>MI · nats</span>') + `<span class="legend-weight">Fixed median · quadratic scaling · max ${(maxOpacity*100).toFixed(0)}% / ${maxWidth.toFixed(2)} px</span>`;
+  }
+  for (const [id,key] of [['opacity-scale','x'],['width-scale','y']]) $(id).addEventListener('input', () => {
+    edgeScales[metric][key] = Number($(id).value); updateScaleControls(); scheduleDraw();
+  });
   const eligibleByMetric = {
     r: nodes.map((node, index) => typeof node.correlationEligible === 'boolean' ? node.correlationEligible : node.eligible !== false && adjacency[index].some(edge => finite(edge.r))),
     mi: nodes.map((node, index) => typeof node.miEligible === 'boolean' ? node.miEligible : node.eligible !== false && adjacency[index].some(edge => finite(edge.mi)))
@@ -227,7 +275,7 @@
     if (!(strength > 0)) return;
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
     ctx.strokeStyle = edgeColor(edge);
-    const style = metric === 'mi' ? miStyle(edge.mi) : { opacity: 0.04 + 0.81 * Math.min(1, strength), width: 0.25 + 3.75 * Math.min(1, strength) };
+    const style = scaledEdgeStyle(metric === 'r' ? Math.abs(edge.r) : edge.mi);
     ctx.globalAlpha = style.opacity;
     ctx.lineWidth = style.width;
     ctx.stroke();
@@ -428,10 +476,8 @@
     $('metric-description').textContent = metric === 'r'
       ? 'Blue edges show positive correlation; yellow edges show negative correlation. Higher absolute correlation makes an edge thicker and more opaque. Shared routines can produce similar patterns.'
       : 'Mutual information detects dependence beyond a straight-line relationship. Thicker, more opaque purple edges mean higher MI, measured in nats. It has no positive or negative sign.';
-    $('graph-legend').innerHTML = metric === 'r'
-      ? '<span><i class="legend-line positive"></i>Positive</span><span><i class="legend-line negative"></i>Negative</span><span class="legend-weight">Thicker + more opaque = stronger |r|</span>'
-      : `<span><i class="legend-line mi"></i>MI · quadratic scale</span><span class="legend-weight">Mean ${meanMi.toFixed(3)}: 1.5 px / 70% · Max ${maxMi.toFixed(3)}: 3 px / 100%</span>`;
     $('limited-node-legend').textContent = metric === 'r' ? 'Correlation unavailable' : 'MI unavailable';
+    updateScaleControls();
     updateVisibleEdges(); if (selected !== null) { renderSelectedStatus(); renderNeighbors(); }
     announce(`Edges now show ${metric === 'r' ? 'Pearson correlation' : 'mutual information in nats'}. Household positions are unchanged.`);
   }
@@ -541,7 +587,7 @@
   $('method-metrics').textContent = meta.miAlgorithm === 1
     ? `Pearson correlation uses raw half-hour kWh. MI uses JIDT KSG algorithm 1 with k=${meta.miK}, continuous readings, paired-observation standardization, and reproducible tiny noise to break ties. KSG returns nats directly. Negative finite-sample estimates are retained in the complete results; only positive MI is drawn. No temporal exclusion window is applied. Constant variables have MI set to zero and undefined correlation.`
     : `Pearson correlation uses raw half-hour kWh. This displayed dataset uses JIDT's discrete estimator with up to ${meta.miBins ?? 8} quantile bins, converted to nats. Binned MI remains the active complete result while faster KSG execution is investigated. Constant series have undefined correlation.`;
-  $('method-network').textContent = `All household pairs are evaluated, but this HTML contains ${number(edges.length)} candidate edges: the union of each household's strongest ${meta.topK ?? 12} neighbors per metric. Filters show a subset; selecting a household adds its strongest candidates. Node hue uses a quadratic scale on each side of the mean household consumption: green at the minimum, yellow at the mean, red at the maximum. Values are January mean kWh per observed half-hour, excluding missing readings. Correlation width and opacity rise linearly with |r|. MI uses a quadratic scale on each side of the fixed mean of nonnegative candidate-edge MI values (including zeros): below the mean, width = 1.5 × (MI / mean)² px and opacity = 70% × (MI / mean)²; above the mean, the squared fraction from mean to maximum increases width from 1.5 to 3 px and opacity from 70% to 100%. Filters do not change these anchors. Grouping uses weighted communities from the union of each household’s five strongest retained candidate links: squared positive MI or squared absolute correlation, so strong negative correlations also group together. Households without usable connections are placed separately. Grouping is independent of edge display and filters; Reset layout restores the original positions and fitted view. Complete pair results are in analysis/pairs.npz.`;
+  $('method-network').textContent = `All household pairs are evaluated, but this HTML contains ${number(edges.length)} candidate edges: the union of each household's strongest ${meta.topK ?? 12} neighbors per metric. Filters show a subset; selecting a household adds its strongest candidates. Node hue uses a quadratic scale on each side of the mean household consumption: green at the minimum, yellow at the mean, red at the maximum. Values are January mean kWh per observed half-hour, excluding missing readings. Both edge metrics use fixed medians across all finite candidate strengths (absolute correlation or nonnegative MI, including zeros). The previous appearance at each median is preserved. Below the median, opacity and width follow the squared fraction of the median strength. Above it, quadratic interpolation reaches opacity(max)=x²×opacity(median) and width(max)=y²×width(median). Opacity x is bounded so the endpoint cannot exceed 100%; settings are remembered independently per metric. Filters and grouping do not change the anchors. Grouping uses weighted communities from the union of each household’s five strongest retained candidate links: squared positive MI or squared absolute correlation, so strong negative correlations also group together. Households without usable connections are placed separately. Grouping is independent of edge display and filters; Reset layout restores the original positions and fitted view. Complete pair results are in analysis/pairs.npz.`;
   const sourceUrl = typeof meta.source === 'string' ? meta.source : meta.source?.url || meta.sourceUrl;
   if (sourceUrl && /^https?:\/\//.test(sourceUrl)) { $('source-link').href = sourceUrl; $('source-link').hidden = false; }
   if (meta.repository && /^https?:\/\//.test(meta.repository)) $('repository-link').href = meta.repository;
@@ -550,6 +596,7 @@
   $('household-list').appendChild(options);
   if (!nodes.length) { $('example-household').disabled = true; $('search-message').textContent = 'This file contains no households.'; }
   updateVisibleEdges();
+  updateScaleControls();
   new ResizeObserver(resize).observe(stage);
   window.addEventListener('resize', () => { if (selected !== null) drawProfile(nodes[selected]); });
   resize();

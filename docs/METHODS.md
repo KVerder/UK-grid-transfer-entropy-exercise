@@ -160,3 +160,17 @@ a group has high association. These are sparse-network communities, not a
 clustering of the complete pair matrix. The browser switches positions instantly
 and independently of edge metric or filter. Reset restores original positions
 and fitted zoom without clearing filters or selected households.
+
+
+## Current median-anchored edge controls (supersedes earlier edge scales)
+
+For each metric, m is the median of all finite candidate strengths: abs(r) or
+nonnegative MI, including zeros. Anchors A and W preserve the previous opacity
+and width evaluated at m. For strength v <= m, alpha=A*(v/m)^2 and width=W*(v/m)^2.
+Above m, q=((v-m)/(max-m))^2, alpha=A*(1+(x^2-1)*q), and width=W*(1+(y^2-1)*q).
+Thus the maximum endpoints are A*x^2 and W*y^2 while the median and all lower
+scores remain unchanged when sliders move. x ranges from 1 to sqrt(1/A),
+preventing opacity over 100%; y ranges from 1 to 4. Metric settings are separate
+and remain fixed across filters and grouping. Node colors remain mean-anchored.
+Use build_html.py --rebuild-layouts if changing the grouping algorithm; otherwise
+identical embedded inputs allow layout reuse for fast styling rebuilds.

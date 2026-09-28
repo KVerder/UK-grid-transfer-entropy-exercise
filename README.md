@@ -23,8 +23,9 @@ shows the HTML source; use **Download raw file** and open the downloaded file.
   only ten bytes per lookup after checking its header. No data is uploaded.
 - Node color uses a quadratic scale on each side of average household mean use:
   green at the minimum, yellow at the mean, red at the maximum. Stronger edges
-  use quadratic MI width/opacity (mean 1.5 px / 70%; maximum 3 px / 100%).
-  Correlation width/opacity remain linear: blue for positive correlation,
+  use median-anchored quadratic width/opacity. The **Opacity x** and **Thickness y**
+  sliders set maximum opacity/thickness to x²/y² times the fixed median appearance.
+  Each metric remembers its settings; opacity is bounded at 100%. Edge colors are: blue for positive correlation,
   yellow for negative correlation, and purple for mutual information.
 - Search any household ID, inspect its retained strongest connections, and
   compare its daily consumption profile.
