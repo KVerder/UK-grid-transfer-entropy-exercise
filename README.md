@@ -12,6 +12,10 @@ It contains its own code and display data and works offline. GitHub's file page
 shows the HTML source; use **Download raw file** and open the downloaded file.
 
 - Toggle Pearson correlation and mutual information to change edge weights.
+- Use **Group households** to cluster by high MI or high correlation strength
+  (absolute r, including strong negative correlation). **Reset layout** restores
+  the original positions and fitted view. Grouping and edge display are independent;
+  filters and the selected household are preserved.
 - Enter two IDs in **Compare two households** to see correlation and MI together.
   Graph candidates work immediately. For any other pair, open **Load all household
   pairs** and choose [household-pairs.gspairs](analysis/household-pairs.gspairs)

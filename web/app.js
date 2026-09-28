@@ -148,6 +148,30 @@
   if (!points.length) { minX = minY = -1; maxX = maxY = 1; }
   const midpoint = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
   points.forEach(point => { point.x -= midpoint.x; point.y -= midpoint.y; });
+  const originalPoints = points.map(point => ({ ...point }));
+  const originalBounds = {minX,maxX,minY,maxY};
+  function setLayout(mode) {
+    const layout = mode === 'original' ? null : data.layouts?.[mode];
+    if (mode !== 'original' && (!layout || layout.positions.length !== nodes.length)) {
+      $('grouping').value = 'original'; $('layout-status').textContent = 'Grouped layout unavailable in this file.'; return;
+    }
+    const next = layout ? layout.positions.map(([x,y]) => ({x,y})) : originalPoints;
+    minX = Infinity; maxX = -Infinity; minY = Infinity; maxY = -Infinity;
+    next.forEach(point => { minX = Math.min(minX,point.x); maxX = Math.max(maxX,point.x); minY = Math.min(minY,point.y); maxY = Math.max(maxY,point.y); });
+    if (!next.length) { minX = minY = -1; maxX = maxY = 1; }
+    const cx = (minX+maxX)/2, cy = (minY+maxY)/2;
+    next.forEach((point,i) => { points[i] = layout ? {x:point.x-cx,y:point.y-cy} : {...point}; });
+    if (!layout) ({minX,maxX,minY,maxY} = originalBounds);
+    // Release active gestures before changing coordinates.
+    pointers.clear(); pinch = drag = null;
+    canvas.classList.remove('dragging'); hovered = null; $('node-tooltip').hidden = true;
+    fitScale = Math.min(Math.max(20,width-100)/Math.max(maxX-minX,0.01),Math.max(20,height-140)/Math.max(maxY-minY,0.01));
+    $('grouping').value = mode;
+    $('layout-status').textContent = layout ? `${layout.groupCount} ${mode === 'mi' ? 'MI' : '|r|'} groups · ${layout.unlinkedCount} unlinked households` : 'Original similarity layout';
+    fit(); announce(`${$('layout-status').textContent}. Edge metric, filters and selected household are preserved.`);
+  }
+  $('grouping').addEventListener('change', () => setLayout($('grouping').value));
+  $('reset-layout').addEventListener('click', () => setLayout('original'));
 
   function announce(message) { $('network-announcement').textContent = message; }
   function isEligible(index) { return eligibleByMetric[metric][index]; }
@@ -517,7 +541,7 @@
   $('method-metrics').textContent = meta.miAlgorithm === 1
     ? `Pearson correlation uses raw half-hour kWh. MI uses JIDT KSG algorithm 1 with k=${meta.miK}, continuous readings, paired-observation standardization, and reproducible tiny noise to break ties. KSG returns nats directly. Negative finite-sample estimates are retained in the complete results; only positive MI is drawn. No temporal exclusion window is applied. Constant variables have MI set to zero and undefined correlation.`
     : `Pearson correlation uses raw half-hour kWh. This displayed dataset uses JIDT's discrete estimator with up to ${meta.miBins ?? 8} quantile bins, converted to nats. Binned MI remains the active complete result while faster KSG execution is investigated. Constant series have undefined correlation.`;
-  $('method-network').textContent = `All household pairs are evaluated, but this HTML contains ${number(edges.length)} candidate edges: the union of each household's strongest ${meta.topK ?? 12} neighbors per metric. Filters show a subset; selecting a household adds its strongest candidates. Node hue uses a quadratic scale on each side of the mean household consumption: green at the minimum, yellow at the mean, red at the maximum. Values are January mean kWh per observed half-hour, excluding missing readings. Correlation width and opacity rise linearly with |r|. MI uses a quadratic scale on each side of the fixed mean of nonnegative candidate-edge MI values (including zeros): below the mean, width = 1.5 × (MI / mean)² px and opacity = 70% × (MI / mean)²; above the mean, the squared fraction from mean to maximum increases width from 1.5 to 3 px and opacity from 70% to 100%. Filters do not change these anchors. Complete pair results are in analysis/pairs.npz.`;
+  $('method-network').textContent = `All household pairs are evaluated, but this HTML contains ${number(edges.length)} candidate edges: the union of each household's strongest ${meta.topK ?? 12} neighbors per metric. Filters show a subset; selecting a household adds its strongest candidates. Node hue uses a quadratic scale on each side of the mean household consumption: green at the minimum, yellow at the mean, red at the maximum. Values are January mean kWh per observed half-hour, excluding missing readings. Correlation width and opacity rise linearly with |r|. MI uses a quadratic scale on each side of the fixed mean of nonnegative candidate-edge MI values (including zeros): below the mean, width = 1.5 × (MI / mean)² px and opacity = 70% × (MI / mean)²; above the mean, the squared fraction from mean to maximum increases width from 1.5 to 3 px and opacity from 70% to 100%. Filters do not change these anchors. Grouping uses weighted communities from the union of each household’s five strongest retained candidate links: squared positive MI or squared absolute correlation, so strong negative correlations also group together. Households without usable connections are placed separately. Grouping is independent of edge display and filters; Reset layout restores the original positions and fitted view. Complete pair results are in analysis/pairs.npz.`;
   const sourceUrl = typeof meta.source === 'string' ? meta.source : meta.source?.url || meta.sourceUrl;
   if (sourceUrl && /^https?:\/\//.test(sourceUrl)) { $('source-link').href = sourceUrl; $('source-link').hidden = false; }
   if (meta.repository && /^https?:\/\//.test(meta.repository)) $('repository-link').href = meta.repository;

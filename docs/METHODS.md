@@ -144,3 +144,19 @@ zeros. Below the mean, width is 1.5*(MI/mean)^2 px and alpha is 0.7*(MI/mean)^2.
 Above it, q=((MI-mean)/(max-mean))^2, width=1.5+1.5*q and alpha=0.7+0.3*q.
 Zero MI is not drawn. Correlation styling and quadratic node colors are unchanged.
 Pinch gestures zoom about the moving midpoint and support simultaneous pan.
+
+
+## Optional metric grouping
+
+The HTML bundles two deterministic precomputed layouts. Weighted Louvain
+communities use the union of each household’s five strongest retained candidate
+links, with squared positive MI or squared
+absolute Pearson r as weights, resolution 1.4 and seed 42 (NetworkX 3.5).
+Thus strong negative correlations also group together. Each community uses
+a weighted spring layout (35 iterations, seed 42); separate disks are packed
+without overlap. Unlinked households occupy a separate region and remain
+searchable. Communities are exploratory and do not imply every pair within
+a group has high association. These are sparse-network communities, not a
+clustering of the complete pair matrix. The browser switches positions instantly
+and independently of edge metric or filter. Reset restores original positions
+and fitted zoom without clearing filters or selected households.

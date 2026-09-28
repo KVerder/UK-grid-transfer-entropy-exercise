@@ -149,3 +149,12 @@ collapsing ten exact duplicates; four missing readings remain blank.
    visually inspected. Binned results remain active; no incomplete KSG result is
    published. Cloud execution still requires device login and credit-only billing
    verification. The temporary check is read-only and runs every 30 minutes.
+
+## 2026-09-28: metric grouping and reset
+
+Added deterministic, precomputed Louvain layouts for high MI and high absolute
+correlation, independent of the displayed edge metric. Browser reset restores
+original coordinates and fitted zoom while retaining filters and selection.
+Clustering tests check strong groups, weak cross-links, negative correlations,
+unlinked nodes, finite geometry, and determinism. Full browser checks exercise
+both layouts, exact reset, preserved controls, and tablet/mobile behavior.
