@@ -22,9 +22,12 @@ monitor has been authorized or installed.
 
 On this device with eight pair workers, a benchmark on 10,000 sampled household
 pairs took 11.91 seconds at `k=2`. Linear extrapolation to the full pair count is
-about 4.3 hours for MI alone. Allow roughly 4–5 hours including preparation,
-saving, and validation; this is an estimate, not a deadline. The device must
-remain running for computation to progress.
+about 4.3 hours for MI alone. **The live full run is substantially slower than
+that short benchmark:** its first 34,816 checkpointed pairs took 322 seconds,
+which extrapolates to roughly 34 hours if that early pace persists. Early rows
+may not represent the remaining population, so no reliable completion time is
+established yet. The earlier 4–5-hour estimate should not be relied upon.
+The device must remain running for computation to progress.
 
 ## Validation before launch
 
