@@ -35,3 +35,19 @@ review-and-fix rounds, then push the HTML, code, and analysis artifacts to GitHu
 - Display a sparse selection of links, but compute and retain every unordered pair.
 - Treat the results as exploratory synchronous associations, not causal links,
   lagged relationships, or tests of statistical significance.
+
+
+### Latest accepted changes
+
+Keep complete binned JIDT results active until a validated fast KSG run exists.
+Use a fixed candidate-edge mean for quadratic MI styling: mean 1.5 px/70%,
+maximum 3 px/100%; weaker edges become thinner and more transparent. Retain
+correlation colors and scaling, and the quadratic mean-centered node colors.
+Support tablet pinch zoom and simultaneous pan. Let users select two arbitrary
+households and view Pearson correlation, MI, and overlap together. Preserve
+tablet responsiveness with a separate local random-access full-pair file.
+Prepare and validate distributed JIDT KSG-1 k=2 execution; launch only within
+the authorized included credit, with no paid overage, after account verification.
+Use a read-only temporary 30-minute status check that pauses after reporting
+completion, failure, or required user input. Push all code and deliver the HTML
+and complete-pair lookup file locally.

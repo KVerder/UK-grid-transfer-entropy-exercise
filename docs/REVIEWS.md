@@ -131,3 +131,21 @@ desktop and mobile views were inspected and the offline browser suite passed.
 The local ten-household CSV now has 1,488 timestamps and household IDs as column
 headers. Every exported value was checked against the source cells after
 collapsing ten exact duplicates; four missing readings remain blank.
+
+
+## 2026-09-28: three reviews of tablet, pair lookup, and cloud preparation
+
+1. Numerical review: cloud shard union matches the existing JIDT KSG-1 runner
+   exactly on 66 test pairs with ties, missing observations, and a constant
+   series. Pilot indexing spans the population. Full lookup export sampled
+   records match the source archive exactly; all five artifact checks pass.
+2. Interaction review: browser tests cover MI maximum width/alpha, differentiated
+   strokes, inverse pinch anchoring to 0.01 CSS pixels, two-finger pan, continued
+   one-finger pan, cancelled touches, and no unintended node selection. Pinch
+   transforms now use the gesture's initial view to prevent cumulative drift.
+3. Delivery review: offline browser tests cover graph candidates and arbitrary
+   file-backed pairs, reversed IDs, invalid/same IDs, rejected files, exact values,
+   desktop/mobile layout, and existing controls. The desktop screenshot was
+   visually inspected. Binned results remain active; no incomplete KSG result is
+   published. Cloud execution still requires device login and credit-only billing
+   verification. The temporary check is read-only and runs every 30 minutes.

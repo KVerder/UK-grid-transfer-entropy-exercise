@@ -2,23 +2,29 @@
 
 ## Interactive household network
 
-**KSG update in progress:** the default pipeline now uses JIDT KSG algorithm 1
-with `k=2`. A full local run is underway. The currently published HTML still
-contains the previous discrete MI values, explicitly labelled on the page.
-See [run status and validation](docs/KSG_RUN.md).
+**Binned MI remains active.** The slow local KSG run has been stopped with its
+checkpoints preserved. A cloud runner is prepared for JIDT KSG algorithm 1,
+`k=2`, but cloud results are not yet available. See [cloud execution](docs/CLOUD.md)
+and [run status](docs/KSG_RUN.md).
 
 Download and open [household-network.html](household-network.html) in a browser.
 It contains its own code and display data and works offline. GitHub's file page
 shows the HTML source; use **Download raw file** and open the downloaded file.
 
 - Toggle Pearson correlation and mutual information to change edge weights.
+- Enter two IDs in **Compare two households** to see correlation and MI together.
+  Graph candidates work immediately. For any other pair, open **Load all household
+  pairs** and choose [household-pairs.gspairs](analysis/household-pairs.gspairs)
+  once. This 130 MB file contains exact results for every pair; the browser reads
+  only ten bytes per lookup after checking its header. No data is uploaded.
 - Node color uses a quadratic scale on each side of average household mean use:
   green at the minimum, yellow at the mean, red at the maximum. Stronger edges
-  are linearly thicker and more opaque: blue for positive correlation,
+  use quadratic MI width/opacity (mean 1.5 px / 70%; maximum 3 px / 100%).
+  Correlation width/opacity remain linear: blue for positive correlation,
   yellow for negative correlation, and purple for mutual information.
 - Search any household ID, inspect its retained strongest connections, and
   compare its daily consumption profile.
-- Pan, zoom, change the edge threshold or edge limit, and export visible edges.
+- Pinch to zoom on tablets, pan with one or two fingers, change the edge threshold or edge limit, and export visible edges.
 - Positions group similar consumption profiles. **They are not household locations.**
 - The display is sparse. Every unordered pair is evaluated separately in
   [analysis/pairs.npz](analysis/pairs.npz); omitted links are not necessarily zero.
@@ -26,7 +32,14 @@ shows the HTML source; use **Download raw file** and open the downloaded file.
 See [methods](docs/METHODS.md), [the executed specification](docs/task-prompt.md),
 and [three review rounds](docs/REVIEWS.md). The original source CSV is preserved.
 
-### Reproduce
+### Rebuild the current binned visualization
+
+Run `python scripts/build_html.py` using the checked-in analysis files.
+Run `python scripts/build_pair_lookup.py` to regenerate the complete-pair lookup
+file whenever the analysis changes. Keep the HTML and lookup file together;
+the browser rejects files with a different dataset or estimator.
+
+### Optional KSG recomputation (slow locally)
 
 Prerequisites: Python 3.11 or newer, a C++17 compiler (`g++` or `clang++` on PATH),
 a Java JDK 11 or newer (`java` and `javac` on PATH), and Git LFS.
@@ -47,7 +60,8 @@ python scripts/build_html.py
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-To rebuild the layout/display dataset from existing pair results after changing
+For completed KSG pair results only (the checked-in binned archive is deliberately
+rejected by the KSG cache validator): to rebuild the layout/display dataset after changing
 display settings, run `python scripts/analyze.py --reuse-pairs`, then rebuild the
 HTML. Reuse verifies the input checksum, household IDs, and metric settings.
 

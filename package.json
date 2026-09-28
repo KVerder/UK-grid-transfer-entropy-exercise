@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Offline London household electricity similarity network",
   "scripts": {
-    "test:browser": "node tests/browser.cjs"
+    "test:browser": "node tests/browser.cjs && node tests/browser_touch.cjs && node tests/browser_pair.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

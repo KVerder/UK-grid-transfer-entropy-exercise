@@ -1,12 +1,18 @@
 # Full KSG-1 run
 
-Status: **running locally; full KSG results are not yet published**.
+Status: **local run stopped at the user’s request; binned MI remains published**.
+
+The last progress report recorded 1,361,920 of 13,043,278 pair slots in
+3,375.4 seconds. Checkpoints remain on this device. Cloud execution is prepared
+but waits for device authentication and confirmation of credit-only billing.
+The user has signed up and authorized up to $7 of included credit, with no paid
+overage; see [CLOUD.md](CLOUD.md).
 
 The full JIDT KSG algorithm 1 run uses `k=2` and all 5,108 households
 (13,043,278 unordered pair slots), with at least 1,000 common readings per pair.
 The current published HTML retains the previous discrete MI results and labels
-them accordingly. Its latest styling is already available: linear width and
-opacity for edge strength, and quadratic node colors centered on mean use.
+them accordingly. Its latest styling is already available: quadratic MI edge width and
+opacity anchored at the mean and maximum, linear correlation styling, and quadratic node colors centered on mean use.
 
 The background runner is `scripts/run_full_ksg.py`. It writes progress to
 `work/full-ksg-status.json`, `work/full-ksg.log`, and `work/full-ksg-error.log`.
@@ -16,7 +22,8 @@ when input values, estimator settings, JIDT jar, and Java sources match.
 The runner stages results in `work/ksg-full-analysis`. It performs independent
 sample checks, artifact tests, and offline browser tests before updating the
 delivered files. Git publication is a separate final step; no automatic recurring
-monitor has been authorized or installed.
+monitor may change data or publish. A temporary read-only 30-minute check is installed;
+it reports completion, failure, or needed input once and then pauses.
 
 ## Measured runtime
 

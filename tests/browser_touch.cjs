@@ -1,0 +1,64 @@
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const {pathToFileURL} = require('node:url');
+const {chromium} = require('playwright');
+(async () => {
+  const browser = await chromium.launch({headless:true, executablePath:process.env.BROWSER_EXECUTABLE});
+  try {
+    const context = await browser.newContext({viewport:{width:1024,height:1366}, hasTouch:true});
+    await context.setOffline(true);
+    const page = await context.newPage();
+    const errors=[]; page.on('pageerror', e=>errors.push(e.message));
+    await page.addInitScript(() => {
+      window.edgeStrokes=[];
+      window.nodeArcs=[];
+      const proto=CanvasRenderingContext2D.prototype, original=proto.stroke, clear=proto.clearRect, arc=proto.arc;
+      proto.arc=function(...args){if(this.canvas.id==='network')window.nodeArcs.push(args.slice(0,3));return arc.apply(this,args);};
+      proto.stroke=function(...args){
+        if(this.canvas.id==='network' && this.strokeStyle==='#8061ae')window.edgeStrokes.push({width:this.lineWidth,opacity:this.globalAlpha});
+        return original.apply(this,args);
+      };
+      proto.clearRect=function(...args){if(this.canvas.id==='network'){window.edgeStrokes=[];window.nodeArcs=[];}return clear.apply(this,args);};
+    });
+    await page.goto(pathToFileURL(path.resolve(__dirname,'../household-network.html')).href);
+    const frame=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+    await frame();
+    await page.locator('input[value=mi]').check(); await frame();
+    const styles=await page.evaluate(()=>window.edgeStrokes);
+    const strongest=styles.reduce((a,b)=>a.width>b.width?a:b);
+    assert(Math.abs(strongest.width-3)<1e-6);
+    assert(Math.abs(strongest.opacity-1)<1e-6);
+    assert.match(await page.locator('#graph-legend').innerText(), /70%.*100%/);
+    assert(new Set(styles.map(s=>s.width.toFixed(3))).size>20, 'MI strokes must have visibly differentiated widths');
+    const rect=await page.locator('#network').boundingBox();
+    const x=rect.x+rect.width/2,y=rect.y+rect.height/2;
+    const cdp=await context.newCDPSession(page);
+    const touch=(id,dx,dy=0)=>({id,x:x+dx,y:y+dy,radiusX:4,radiusY:4,force:1});
+    const bitmap=()=>page.locator('#network').evaluate(el=>el.toDataURL());
+    const initial=await bitmap();
+    const originalArcs=await page.evaluate(()=>window.nodeArcs);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[touch(1,-80),touch(2,80)]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[touch(1,-140),touch(2,140)]});
+    await frame(); assert.notEqual(await bitmap(),initial,'Two fingers must zoom the graph');
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[touch(1,-80),touch(2,80)]});
+    await frame();
+    const restoredArcs=await page.evaluate(()=>window.nodeArcs);
+    assert.equal(restoredArcs.length,originalArcs.length);
+    const anchorError=Math.max(...restoredArcs.flatMap((arc,i)=>arc.map((value,j)=>Math.abs(value-originalArcs[i][j]))));
+    assert(anchorError<0.01,`Inverse pinch must restore graph coordinates within 0.01 CSS pixels; error=${anchorError}`);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[touch(1,-50,20),touch(2,110,20)]});
+    await frame(); assert.notEqual(await bitmap(),initial,'Two-finger translation must pan');
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[touch(1,-50,20)]});
+    const beforePan=await bitmap();
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[touch(1,-20,30)]});
+    await frame(); assert.notEqual(await bitmap(),beforePan,'Remaining finger must continue panning');
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    assert(await page.locator('#selection-detail').isHidden(),'Pinch end must not select a household');
+    await page.locator('#fit').click(); await frame();
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[touch(1,-80),touch(2,80)]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+    assert.equal(await page.locator('#network').evaluate(el=>el.classList.contains('dragging')),false);
+    assert.deepEqual(errors,[]);
+    console.log('PASS: quadratic MI maximum/variation; tablet pinch, anchor, two-finger pan, one-finger continuation, cancellation, no accidental selection; offline.');
+  } finally {await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -80,10 +80,10 @@ hue = 120 * (1-u) degrees
 The legend reports all three anchors. A dashed outline indicates that the
 household cannot support the active metric under the coverage/variance rule.
 
-Both edge width and opacity increase linearly with strength:
+Correlation edge width and opacity increase linearly with strength:
 `width = 0.25 + 3.75 * strength` pixels and
-`opacity = 0.04 + 0.81 * strength`. Strength is `abs(r)` for correlation and
-`MI / largest candidate MI` for positive MI. The scale stays fixed across
+`opacity = 0.04 + 0.81 * strength`. Strength is `abs(r)`.
+MI uses the mean-centered quadratic mapping specified below. Scales stay fixed across
 filters. Positive correlation is blue, negative correlation yellow, and MI
 purple. Selection draws each edge once, preserving its opacity.
 
@@ -132,3 +132,15 @@ Pairs use the upper triangle without a diagonal, in order `(0,1), (0,2), ...,
 `i * (2*N - i - 1) // 2 + j - i - 1`. Scores unavailable under the documented
 rules are NaN. `scripts/lookup_pair.py` retrieves any two household IDs from
 these complete results, including pairs omitted from the displayed network.
+
+
+## Current display revision
+
+The published full-population data remains JIDT discrete MI (up to eight quantile
+bins, bits converted to nats). The local continuous KSG run was stopped; KSG
+methods above describe the optional recomputation, not the current displayed MI.
+MI styling now uses the fixed mean of nonnegative candidate-edge scores, including
+zeros. Below the mean, width is 1.5*(MI/mean)^2 px and alpha is 0.7*(MI/mean)^2.
+Above it, q=((MI-mean)/(max-mean))^2, width=1.5+1.5*q and alpha=0.7+0.3*q.
+Zero MI is not drawn. Correlation styling and quadratic node colors are unchanged.
+Pinch gestures zoom about the moving midpoint and support simultaneous pan.

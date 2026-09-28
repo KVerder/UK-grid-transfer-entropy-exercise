@@ -25,6 +25,69 @@
   };
   const nodeColors = nodes.map(node => consumptionColor(node.mean));
   const nodeById = new Map(nodes.map((node, index) => [String(node.id).toUpperCase(), index]));
+  let pairFile = null;
+  let pairDataOffset = 0;
+  let pairRequest = 0;
+  function pairNumber(value, signed = false) {
+    return Number.isFinite(value) ? `${signed && value > 0 ? '+' : ''}${value.toFixed(6)}` : 'Unavailable';
+  }
+  async function comparePair(event) {
+    if (event) event.preventDefault();
+    const request = ++pairRequest;
+    $('pair-results').hidden = true;
+    const a = nodeById.get($('pair-a').value.trim().toUpperCase());
+    const b = nodeById.get($('pair-b').value.trim().toUpperCase());
+    if (a === undefined || b === undefined) { $('pair-status').textContent = 'Choose two valid household IDs from the suggestions.'; return; }
+    if (a === b) { $('pair-status').textContent = 'Choose two different households.'; return; }
+    const s = Math.min(a,b), t = Math.max(a,b);
+    let pair = edges.find(edge => edge.s === s && edge.t === t);
+    try {
+      if (pairFile) {
+        const index = s * (2 * nodes.length - s - 1) / 2 + t - s - 1;
+        const bytes = await pairFile.slice(pairDataOffset + index * 10, pairDataOffset + index * 10 + 10).arrayBuffer();
+        if (bytes.byteLength !== 10) throw new Error('Pair file is incomplete.');
+        const view = new DataView(bytes);
+        pair = { r: view.getFloat32(0,true), mi: view.getFloat32(4,true), n: view.getUint16(8,true) };
+      }
+      if (request !== pairRequest) return;
+      if (!pair) {
+        $('pair-status').textContent = 'This pair is outside the sparse graph. Open “Load all household pairs” below and choose household-pairs.gspairs to show its exact metrics.';
+        document.querySelector('.pair-file-details').open = true;
+        return;
+      }
+      $('pair-r').textContent = pairNumber(pair.r, true);
+      $('pair-mi').textContent = pairNumber(pair.mi);
+      $('pair-n').textContent = number(pair.n);
+      $('pair-results').hidden = false;
+      $('pair-status').textContent = `${nodes[a].id} ↔ ${nodes[b].id}. ${meta.miAlgorithm === 1 ? `JIDT KSG-1, k=${meta.miK}` : `JIDT binned MI, up to ${meta.miBins ?? 8} bins`}. ${pair.n < (meta.minOverlap ?? 1000) ? 'Insufficient shared readings; both metrics unavailable.' : !finite(pair.r) ? 'Pearson correlation is undefined for a constant series.' : 'Exact stored pair values; rounded to six decimal places.'}`;
+    } catch(error) { if (request === pairRequest) $('pair-status').textContent = error.message; }
+  }
+  $('pair-form').addEventListener('submit', comparePair);
+  ['pair-a','pair-b'].forEach(id => $(id).addEventListener('input', () => { ++pairRequest; $('pair-results').hidden = true; $('pair-status').textContent = 'Press Compare pair to update both metrics.'; }));
+  let fileRequest = 0;
+  $('pair-file').addEventListener('change', async () => {
+    const request = ++fileRequest;
+    ++pairRequest; pairFile = null; $('pair-results').hidden = true;
+    const file = $('pair-file').files[0];
+    if (!file) return;
+    try {
+      const prefix = await file.slice(0,12).arrayBuffer();
+      if (prefix.byteLength !== 12 || new TextDecoder().decode(prefix.slice(0,8)) !== 'GSPAIR01') throw new Error('Choose a GSclone .gspairs results file.');
+      const length = new DataView(prefix).getUint32(8,true);
+      if (length > 2000000 || length < 2) throw new Error('Invalid pair-file header.');
+      const header = JSON.parse(await file.slice(12,12+length).text());
+      if (header.format !== 'GSclone-pairs-v1' || header.sourceSha256 !== meta.sourceSha256 ||
+          header.miEstimator !== meta.miEstimator || (header.miAlgorithm ?? null) !== (meta.miAlgorithm ?? null) ||
+          (header.miK ?? null) !== (meta.miK ?? null) || (header.miBins ?? null) !== (meta.miBins ?? null) ||
+          header.minOverlap !== meta.minOverlap || !Array.isArray(header.ids) || header.ids.length !== nodes.length ||
+          !header.ids.every((id,i) => id === nodes[i].id) || header.count !== nodes.length*(nodes.length-1)/2 ||
+          file.size !== 12+length+header.count*10) throw new Error('This file does not match the dataset and MI estimator in this HTML.');
+      if (request !== fileRequest) return;
+      pairFile = file; pairDataOffset = 12+length;
+      $('pair-file-status').textContent = `All ${number(header.count)} household pairs are ready. Nothing uploaded.`;
+      if ($('pair-a').value && $('pair-b').value) await comparePair();
+    } catch(error) { if (request === fileRequest) $('pair-file-status').textContent = error.message; }
+  });
   const adjacency = Array.from({ length: nodes.length }, () => []);
   edges.forEach(edge => {
     if (Number.isInteger(edge.s) && Number.isInteger(edge.t) && adjacency[edge.s] && adjacency[edge.t]) {
@@ -45,6 +108,8 @@
   let fitScale = 1;
   let view = { x: 0, y: 0, scale: 1 };
   let drag = null;
+  const pointers = new Map();
+  let pinch = null;
   let renderQueued = false;
   const canvas = $('network');
   const ctx = canvas.getContext('2d');
@@ -56,7 +121,19 @@
     r: edges.filter(edge => finite(edge.r) && Math.abs(edge.r) > 0).sort((a, b) => Math.abs(b.r) - Math.abs(a.r) || a.s - b.s || a.t - b.t),
     mi: edges.filter(edge => finite(edge.mi) && edge.mi > 0).sort((a, b) => b.mi - a.mi || a.s - b.s || a.t - b.t)
   };
-  const maxMi = Math.max(0.01, ...sorted.mi.slice(0, 1).map(edge => edge.mi));
+  const maxMi = sorted.mi[0]?.mi || 0.01;
+  const candidateMi = edges.filter(edge => finite(edge.mi) && edge.mi >= 0);
+  const meanMi = candidateMi.length ? candidateMi.reduce((sum, edge) => sum + edge.mi, 0) / candidateMi.length : 0;
+  // Fixed candidate-population anchors: filtering never changes a given edge's style.
+  function miStyle(value) {
+    if (!(value > 0)) return { width: 0, opacity: 0 };
+    if (value <= meanMi && meanMi > 0) {
+      const q = Math.pow(value / meanMi, 2);
+      return { width: 1.5 * q, opacity: 0.7 * q };
+    }
+    const q = maxMi > meanMi ? Math.pow(Math.min(1, (value - meanMi) / (maxMi - meanMi)), 2) : 0;
+    return { width: 1.5 + 1.5 * q, opacity: 0.7 + 0.3 * q };
+  }
   const eligibleByMetric = {
     r: nodes.map((node, index) => typeof node.correlationEligible === 'boolean' ? node.correlationEligible : node.eligible !== false && adjacency[index].some(edge => finite(edge.r))),
     mi: nodes.map((node, index) => typeof node.miEligible === 'boolean' ? node.miEligible : node.eligible !== false && adjacency[index].some(edge => finite(edge.mi)))
@@ -126,8 +203,9 @@
     if (!(strength > 0)) return;
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
     ctx.strokeStyle = edgeColor(edge);
-    ctx.globalAlpha = 0.04 + 0.81 * Math.min(1, strength);
-    ctx.lineWidth = 0.25 + 3.75 * Math.min(1, strength);
+    const style = metric === 'mi' ? miStyle(edge.mi) : { opacity: 0.04 + 0.81 * Math.min(1, strength), width: 0.25 + 3.75 * Math.min(1, strength) };
+    ctx.globalAlpha = style.opacity;
+    ctx.lineWidth = style.width;
     ctx.stroke();
   }
 
@@ -328,7 +406,7 @@
       : 'Mutual information detects dependence beyond a straight-line relationship. Thicker, more opaque purple edges mean higher MI, measured in nats. It has no positive or negative sign.';
     $('graph-legend').innerHTML = metric === 'r'
       ? '<span><i class="legend-line positive"></i>Positive</span><span><i class="legend-line negative"></i>Negative</span><span class="legend-weight">Thicker + more opaque = stronger |r|</span>'
-      : '<span><i class="legend-line mi"></i>Mutual information</span><span class="legend-weight">Thicker + more opaque = higher MI · nats</span>';
+      : `<span><i class="legend-line mi"></i>MI · quadratic scale</span><span class="legend-weight">Mean ${meanMi.toFixed(3)}: 1.5 px / 70% · Max ${maxMi.toFixed(3)}: 3 px / 100%</span>`;
     $('limited-node-legend').textContent = metric === 'r' ? 'Correlation unavailable' : 'MI unavailable';
     updateVisibleEdges(); if (selected !== null) { renderSelectedStatus(); renderNeighbors(); }
     announce(`Edges now show ${metric === 'r' ? 'Pearson correlation' : 'mutual information in nats'}. Household positions are unchanged.`);
@@ -362,11 +440,29 @@
   canvas.addEventListener('pointerdown', event => {
     if (event.button !== 0) return;
     const rect = canvas.getBoundingClientRect();
+    pointers.set(event.pointerId, { x: event.clientX - rect.left, y: event.clientY - rect.top });
     drag = { id: event.pointerId, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top, moved: false };
+    if (pointers.size > 1) {
+      drag = null; pinch = { ...pinchGeometry(), view: { ...view } }; hovered = null; scheduleDraw();
+    }
     canvas.setPointerCapture(event.pointerId); canvas.classList.add('dragging'); $('node-tooltip').hidden = true;
   });
+  function pinchGeometry() {
+    const [a, b] = Array.from(pointers.values());
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, distance: Math.hypot(a.x - b.x, a.y - b.y) };
+  }
   canvas.addEventListener('pointermove', event => {
     const rect = canvas.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top;
+    if (pointers.has(event.pointerId)) pointers.set(event.pointerId, { x, y });
+    if (pointers.size > 1) {
+      const next = pinchGeometry();
+      if (pinch && pinch.distance > 0 && next.distance > 0) {
+        const scale = Math.max(fitScale * 0.3, Math.min(fitScale * 30, pinch.view.scale * next.distance / pinch.distance));
+        const ratio = scale / pinch.view.scale;
+        view = { scale, x: next.x - (pinch.x - pinch.view.x) * ratio, y: next.y - (pinch.y - pinch.view.y) * ratio };
+      }
+      scheduleDraw(); return;
+    }
     if (drag && drag.id === event.pointerId) {
       const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
       if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 3) drag.moved = true;
@@ -377,13 +473,21 @@
     if (hovered !== index) { hovered = index; scheduleDraw(); }
     showTooltip(index, x, y); canvas.style.cursor = index === null ? 'grab' : 'pointer';
   });
-  canvas.addEventListener('pointerup', event => {
-    if (!drag || event.pointerId !== drag.id) return;
-    if (!drag.moved) selectNode(nearest(drag.offsetX, drag.offsetY));
-    drag = null; canvas.classList.remove('dragging');
+  function endPointer(event) {
+    if (!pointers.has(event.pointerId)) return;
+    if (event.type === 'pointerup' && drag && event.pointerId === drag.id && !drag.moved && pointers.size === 1) selectNode(nearest(drag.offsetX, drag.offsetY));
+    pointers.delete(event.pointerId); drag = null; pinch = null;
+    if (pointers.size > 1) pinch = { ...pinchGeometry(), view: { ...view } };
+    else if (pointers.size === 1) {
+      const [id, p] = pointers.entries().next().value, rect = canvas.getBoundingClientRect();
+      drag = { id, x: p.x + rect.left, y: p.y + rect.top, startX: p.x + rect.left, startY: p.y + rect.top, offsetX: p.x, offsetY: p.y, moved: true };
+    }
+    if (!pointers.size) canvas.classList.remove('dragging');
     if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-  });
-  canvas.addEventListener('pointercancel', () => { drag = null; canvas.classList.remove('dragging'); });
+  }
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  canvas.addEventListener('lostpointercapture', endPointer);
   canvas.addEventListener('pointerleave', () => { if (!drag) { hovered = null; $('node-tooltip').hidden = true; scheduleDraw(); } });
   canvas.addEventListener('keydown', event => {
     const actions = { '+': () => zoomBy(1.3), '=': () => zoomBy(1.3), '-': () => zoomBy(1 / 1.3), '0': fit, Escape: () => selectNode(null), ArrowLeft: () => { view.x += 40; }, ArrowRight: () => { view.x -= 40; }, ArrowUp: () => { view.y += 40; }, ArrowDown: () => { view.y -= 40; } };
@@ -412,8 +516,8 @@
   $('method-cleaning').textContent = `Duplicate household/timestamp readings are resolved before analysis. Metrics use only jointly available timestamps, with a minimum of ${number(meta.minOverlap ?? 1000)} paired readings. Missing values are not imputed for either metric. Coverage describes available half-hour slots.`;
   $('method-metrics').textContent = meta.miAlgorithm === 1
     ? `Pearson correlation uses raw half-hour kWh. MI uses JIDT KSG algorithm 1 with k=${meta.miK}, continuous readings, paired-observation standardization, and reproducible tiny noise to break ties. KSG returns nats directly. Negative finite-sample estimates are retained in the complete results; only positive MI is drawn. No temporal exclusion window is applied. Constant variables have MI set to zero and undefined correlation.`
-    : `Pearson correlation uses raw half-hour kWh. This displayed dataset uses JIDT's discrete estimator with up to ${meta.miBins ?? 8} quantile bins, converted to nats. The full KSG-1 calculation is pending; this view has not been relabelled as KSG. Constant series have undefined correlation.`;
-  $('method-network').textContent = `All household pairs are evaluated, but this HTML contains ${number(edges.length)} candidate edges: the union of each household's strongest ${meta.topK ?? 12} neighbors per metric. Filters show a subset; selecting a household adds its strongest candidates. Node hue uses a quadratic scale on each side of the mean household consumption: green at the minimum, yellow at the mean, red at the maximum. Values are January mean kWh per observed half-hour, excluding missing readings. Edge width and opacity both rise linearly with |r| or MI divided by the largest candidate MI. Opacity scales differ between metrics. Complete pair results are in analysis/pairs.npz.`;
+    : `Pearson correlation uses raw half-hour kWh. This displayed dataset uses JIDT's discrete estimator with up to ${meta.miBins ?? 8} quantile bins, converted to nats. Binned MI remains the active complete result while faster KSG execution is investigated. Constant series have undefined correlation.`;
+  $('method-network').textContent = `All household pairs are evaluated, but this HTML contains ${number(edges.length)} candidate edges: the union of each household's strongest ${meta.topK ?? 12} neighbors per metric. Filters show a subset; selecting a household adds its strongest candidates. Node hue uses a quadratic scale on each side of the mean household consumption: green at the minimum, yellow at the mean, red at the maximum. Values are January mean kWh per observed half-hour, excluding missing readings. Correlation width and opacity rise linearly with |r|. MI uses a quadratic scale on each side of the fixed mean of nonnegative candidate-edge MI values (including zeros): below the mean, width = 1.5 × (MI / mean)² px and opacity = 70% × (MI / mean)²; above the mean, the squared fraction from mean to maximum increases width from 1.5 to 3 px and opacity from 70% to 100%. Filters do not change these anchors. Complete pair results are in analysis/pairs.npz.`;
   const sourceUrl = typeof meta.source === 'string' ? meta.source : meta.source?.url || meta.sourceUrl;
   if (sourceUrl && /^https?:\/\//.test(sourceUrl)) { $('source-link').href = sourceUrl; $('source-link').hidden = false; }
   if (meta.repository && /^https?:\/\//.test(meta.repository)) $('repository-link').href = meta.repository;

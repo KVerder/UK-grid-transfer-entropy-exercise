@@ -34,12 +34,23 @@
           <div class="graph-toolbar" aria-label="Network navigation"><button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">+</button><button id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out">−</button><button id="fit" type="button" title="Fit all households (0)" aria-label="Fit all households"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3H3v4m10-4h4v4M3 13v4h4m10-4v4h-4"/></svg></button></div>
           <div class="graph-empty" id="graph-empty" hidden>No candidate connections meet this filter.<br><span>Lower the minimum to see more edges.</span></div>
           <div class="tooltip" id="node-tooltip" role="status" hidden></div>
-          <div class="gesture-hint">Scroll to zoom · drag to pan · select a household</div>
+          <div class="gesture-hint">Pinch or scroll to zoom · drag to pan · tap a household</div>
         </div>
         <div class="network-footer"><div class="node-legends"><div id="node-color-legend"><span>Mean use · kWh / half hour<br>Quadratic · yellow = average</span><span class="consumption-scale"><span class="consumption-gradient" aria-hidden="true"></span><span class="consumption-stops"><span>Min <b id="consumption-min">—</b></span><span>Mean <b id="consumption-middle">—</b></span><span>Max <b id="consumption-max">—</b></span></span></span></div><span class="quality-legend"><i class="node-dot excluded"></i>Dashed outline: <span id="limited-node-legend">Correlation unavailable</span></span></div><button id="export-edges" type="button">Export visible edges <span aria-hidden="true">↗</span></button></div>
       </div>
 
       <aside class="detail-pane" aria-label="Household details">
+        <section class="pair-comparison" aria-labelledby="pair-title">
+          <div class="sidebar-title"><h2 id="pair-title">Compare two households</h2><span>PAIR METRICS</span></div>
+          <form id="pair-form">
+            <label for="pair-a">Household A</label><input id="pair-a" list="household-list" placeholder="MAC000002" autocomplete="off" spellcheck="false" required>
+            <label for="pair-b">Household B</label><input id="pair-b" list="household-list" placeholder="MAC000003" autocomplete="off" spellcheck="false" required>
+            <button type="submit" class="pair-button">Compare pair</button>
+          </form>
+          <dl class="pair-results" id="pair-results" hidden><div><dt>Pearson r</dt><dd id="pair-r"></dd></div><div><dt>MI · nats</dt><dd id="pair-mi"></dd></div><div><dt>Shared readings</dt><dd id="pair-n"></dd></div></dl>
+          <p id="pair-status" role="status" aria-live="polite">Compare any two distinct household IDs. Both metrics appear together.</p>
+          <details class="pair-file-details"><summary>Load all household pairs</summary><p>For pairs outside the graph, choose household-pairs.gspairs once. The file stays on this device; only the requested pair is read.</p><input id="pair-file" type="file" accept=".gspairs" aria-label="Load complete pair results"><p id="pair-file-status" role="status">Graph candidates are available without a file.</p></details>
+        </section>
         <div class="sidebar-title"><h2>Find a household</h2><span>01 / EXPLORE</span></div>
         <form id="search-form"><label class="visually-hidden" for="household-search">Household ID</label><div class="search-field"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m12.5 12.5 4 4"/></svg><input id="household-search" type="text" list="household-list" placeholder="Search household ID…" autocomplete="off" spellcheck="false"><button type="submit" aria-label="Find household">↵</button></div><datalist id="household-list"></datalist><p class="search-message" id="search-message" role="status"></p></form>
         <div class="selection-empty" id="selection-empty"><div class="empty-motif" aria-hidden="true"><svg viewBox="0 0 130 105"><path d="M24 34 65 51 105 22M65 51 97 85M65 51 29 89"/><circle cx="24" cy="34" r="5"/><circle cx="105" cy="22" r="5"/><circle cx="97" cy="85" r="5"/><circle cx="29" cy="89" r="5"/><circle class="center" cx="65" cy="51" r="11"/></svg></div><h3>A city of individual rhythms.</h3><p>Select a node or search an ID to explore its strongest available connections and daily electricity use.</p><button id="example-household" class="text-button" type="button">Explore a household <span aria-hidden="true">→</span></button></div>

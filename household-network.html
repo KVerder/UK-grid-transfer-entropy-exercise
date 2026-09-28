@@ -7,6 +7,7 @@
   <meta name="description" content="Explore January 2014 London household electricity-use similarities using correlation and mutual information.">
   <title>London household connections · January 2014</title>
   <style>:root{--paper:#f7f7f2;--white:#fff;--ink:#17352e;--muted:#748079;--border:#dfe5dc;--teal:#268273;--orange:#c87946;--purple:#8062ac;--pale:#edf2ea;--sidebar:320px;--radius:14px;font-family:Inter,"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--paper);font-synthesis:none}*{box-sizing:border-box}body{margin:0}button,input{font:inherit}button,a,input,summary{-webkit-tap-highlight-color:transparent}button{cursor:pointer}button{color:var(--ink)}button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible,canvas:focus-visible{outline:3px solid #4a998a;outline-offset:4px}button:disabled{cursor:default;opacity:.5}a{color:var(--teal);text-underline-offset:3px}button[hidden],[hidden]{display:none!important}.page-header{height:83px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;margin:0 40px}.brand{font-size:11px;font-weight:750;letter-spacing:1.65px;display:flex;align-items:center;gap:11px}.brand-icon{display:flex;width:25px;height:28px}.brand-icon svg{overflow:visible;fill:var(--teal);stroke:var(--teal);stroke-width:1.4}.edition{display:flex;align-items:center;gap:20px;font-size:10px;letter-spacing:1.3px;color:var(--muted)}.edition span{border:1px solid var(--border);border-radius:5px;padding:7px 9px;font-weight:650;color:var(--ink);letter-spacing:1px}main{max-width:1800px;margin:0 auto;padding:0 40px}.intro{display:flex;justify-content:space-between;align-items:center;padding:39px 0 32px;gap:30px}.eyebrow{font-size:9px;letter-spacing:1.7px;font-weight:750;margin:0 0 13px;color:var(--muted)}h1{font-size:clamp(29px,3vw,44px);font-weight:520;letter-spacing:-1.9px;line-height:1.16;margin:0 0 13px}h1>span{color:var(--teal)}.intro-copy{font-size:13px;line-height:1.6;color:var(--muted);margin:0}.stats{display:flex;gap:34px;flex-shrink:0}.stats>div{display:flex;flex-direction:column;gap:7px;border-left:1px solid var(--border);padding-left:24px}.stats strong{font-size:28px;font-weight:500;letter-spacing:-1px;font-variant-numeric:tabular-nums}.stats span{font-size:10px;color:var(--muted)}.explorer{display:grid;grid-template-columns:minmax(0,1fr) var(--sidebar);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:#fff;box-shadow:0 3px 15px #24392b03}.network-pane{min-width:0;display:flex;flex-direction:column}.graph-heading{display:flex;align-items:center;justify-content:space-between;padding:23px 24px 20px;gap:16px}.graph-heading h2,.sidebar-title h2{font-size:14px;font-weight:650;margin:0 0 7px;letter-spacing:-.2px}.graph-heading p{font-size:10px;color:var(--muted);margin:0;line-height:1.45}.pill{display:flex;align-items:center;gap:6px;font-size:8px;font-weight:650;letter-spacing:1px;white-space:nowrap;color:#6b7d73;background:#f3f6f0;padding:7px 9px;border-radius:4px}.pill>span{width:4px;height:4px;background:var(--teal);border-radius:50%}.controls{display:flex;gap:25px;align-items:center;padding:0 24px 20px;flex-wrap:wrap;border-bottom:1px solid var(--border)}.metric-switch{display:flex;gap:2px;border:1px solid var(--border);background:#f7f8f4;border-radius:6px;padding:3px;margin:0;flex-shrink:0;min-width:0}.metric-switch legend{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.metric-switch label{position:relative;cursor:pointer}.metric-switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}.metric-switch span{display:block;padding:9px 11px;border:1px solid transparent;border-radius:4px;font-size:10px;font-weight:600;color:#728078}.metric-switch input:checked+span{background:#fff;border-color:#e0e5de;box-shadow:0 1px 3px #2d4b3312;color:var(--ink)}.metric-switch input:focus-visible+span{outline:3px solid #4a998a}.slider-control{min-width:120px;max-width:190px;flex:1}.slider-control label{display:flex;align-items:baseline;gap:4px;font-size:9px;font-weight:550;color:var(--muted);margin-bottom:5px}.slider-control output{margin-left:auto;color:var(--ink);font-variant-numeric:tabular-nums;font-size:10px;font-weight:650}.slider-control input{display:block;width:100%;height:13px;accent-color:var(--teal);margin:0;cursor:pointer}.graph-stage{height:570px;min-height:390px;position:relative;overflow:hidden;background:#fbfcf8;background-image:radial-gradient(#e1e7dc 0.6px,transparent 0.6px);background-size:20px 20px}.graph-stage>canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}.graph-stage>canvas.dragging{cursor:grabbing}.stage-note{position:absolute;top:16px;left:20px;display:flex;flex-direction:column;gap:6px;pointer-events:none;font-size:9px;color:#6d7f73;background:#fbfcf8de;padding:5px 6px;border-radius:3px;font-variant-numeric:tabular-nums}.stage-note>span:nth-child(2){font-size:8px;color:var(--teal)}.graph-legend{position:absolute;left:20px;bottom:38px;display:flex;align-items:center;gap:13px;font-size:9px;pointer-events:none;color:#718076;background:#fbfcf8ec;padding:7px 8px;border-radius:4px;flex-wrap:wrap;max-width:calc(100% - 80px)}.graph-legend>span{display:flex;align-items:center;gap:5px}.legend-line{width:17px;height:2px;background:var(--teal)}.legend-line.negative{background:var(--orange)}.legend-line.mi{background:var(--purple)}.legend-weight{font-size:8px;border-left:1px solid #d8e0d6;padding-left:13px}.graph-toolbar{position:absolute;right:18px;bottom:36px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;overflow:hidden;box-shadow:0 2px 5px #21392909}.graph-toolbar button{width:31px;height:31px;display:flex;align-items:center;justify-content:center;border:0;background:#fff;font-size:18px;font-weight:350}.graph-toolbar button+button{border-top:1px solid var(--border)}.graph-toolbar button:hover{background:var(--pale)}.graph-toolbar svg{width:17px;height:17px;fill:none;stroke:var(--ink);stroke-width:1.25}.gesture-hint{position:absolute;left:26px;bottom:15px;font-size:8px;letter-spacing:.15px;color:#98a298;pointer-events:none}.network-footer{min-height:46px;padding:12px 24px;display:flex;justify-content:space-between;align-items:center;gap:15px;border-top:1px solid var(--border);font-size:8px;color:var(--muted)}.network-footer>span{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.node-dot{display:inline-block;width:5px;height:5px;background:var(--teal);border-radius:50%}.node-dot.excluded{border:1px solid #a5b0a6;background:transparent}.dot-divider{margin:0 4px}.network-footer button{border:0;padding:0;background:none;font-size:9px;white-space:nowrap;color:var(--ink)}.network-footer button>span{margin-left:8px}.detail-pane{border-left:1px solid var(--border);padding:25px 24px 22px;display:flex;flex-direction:column;min-width:0}.sidebar-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:17px}.sidebar-title h2{font-size:12px;margin:0}.sidebar-title>span{font-size:7px;letter-spacing:1.1px;color:#a1aaa0;white-space:nowrap}.search-field{position:relative;display:flex;align-items:center;border:1px solid var(--border);border-radius:6px;background:#fbfcf9;height:38px}.search-field>svg{position:absolute;left:11px;width:13px;height:13px;fill:none;stroke:#8b998e;stroke-width:1.4;pointer-events:none}.search-field input{width:100%;border:0;background:none;padding:10px 28px 10px 32px;font-size:10px;color:var(--ink);border-radius:6px;min-width:0}.search-field input::placeholder{color:#8b998e}.search-field button{position:absolute;right:4px;border:0;background:none;color:#88958a;font-size:15px;width:27px;height:28px}.search-message{margin:6px 0 0;min-height:12px;font-size:9px;color:#986d37;line-height:1.4}.selection-empty{padding:36px 0 31px;text-align:center}.empty-motif{width:122px;margin:0 auto 23px}.empty-motif svg{fill:#eef4eb;stroke:#bed4c2;stroke-width:1}.empty-motif .center{fill:#d9e9d8;stroke:#74a68b;stroke-width:1.4}.selection-empty h3{font-size:16px;font-weight:550;letter-spacing:-.3px;margin:0 0 12px}.selection-empty p{font-size:11px;line-height:1.85;color:var(--muted);margin:0 auto;max-width:226px}.text-button{font-size:10px;font-weight:650;color:var(--teal);border:0;background:transparent;padding:17px 0}.text-button>span{margin-left:10px}.selection-heading{display:flex;justify-content:space-between;align-items:center;margin:20px 0 8px;gap:10px}.selection-heading .eyebrow{font-size:8px;margin-bottom:6px;letter-spacing:1.1px}.selection-heading h3{font-size:25px;letter-spacing:-.75px;font-weight:520;margin:0}.icon-button{border:1px solid var(--border);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:#fff;font-size:18px;color:#748778;flex-shrink:0}.selected-status{font-size:9px;color:var(--muted);line-height:1.6;margin:0 0 16px}.household-stats{display:grid;grid-template-columns:1fr 1fr;gap:15px 6px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:16px 0;margin:0}.household-stats>div:last-child{grid-column:1/-1}.household-stats dt{font-size:9px;color:var(--muted);margin:0 0 6px}.household-stats dd{font-size:15px;letter-spacing:-.3px;margin:0;font-variant-numeric:tabular-nums}.household-stats>div:last-child dd{font-size:11px}.profile-section{padding:20px 0 18px;border-bottom:1px solid var(--border)}.section-label{display:flex;justify-content:space-between;align-items:center;gap:10px}.section-label h4{font-size:10px;font-weight:650;margin:0}.section-label>span{font-size:7px;color:var(--muted)}#daily-profile{display:block;width:100%;height:78px;margin-top:12px}.profile-axis{display:flex;justify-content:space-between;font-size:7px;color:#95a091}.profile-note{font-size:8px;line-height:1.55;color:#91a08f;margin:10px 0 0}.connections-section{padding:19px 0 20px}.connection-note{font-size:8px;line-height:1.65;color:#91a08f;margin:7px 0 11px}.neighbor-row{display:grid;grid-template-columns:1fr 49px;align-items:center;gap:10px;width:100%;border:0;border-bottom:1px solid #edf0e9;background:transparent;padding:8px 0;font-size:10px;text-align:left}.neighbor-row:hover{color:var(--teal);background:#f6f9f1}.neighbor-row:last-child{border-bottom:0}.neighbor-row>span:first-child{display:flex;gap:8px;align-items:center}.neighbor-row i{display:inline-block;background:var(--teal);border-radius:50%;width:4px;height:4px}.neighbor-row>span:last-child{font-variant-numeric:tabular-nums;font-size:10px;text-align:right}.no-neighbors{font-size:10px;color:var(--muted);line-height:1.6}.metric-explanation{padding-top:18px;border-top:1px solid var(--border);margin-top:auto}.metric-explanation .eyebrow{font-size:8px;letter-spacing:1.2px;margin-bottom:8px}.metric-explanation p:last-child{font-size:10px;line-height:1.8;color:var(--muted);margin:0}.tooltip{position:absolute;background:#183d31ef;color:#fff;box-shadow:0 4px 10px #1a332c20;padding:9px 12px;border-radius:5px;font-size:10px;pointer-events:none;z-index:5;max-width:225px;line-height:1.6}.tooltip span{color:#c1d7c5;font-size:9px}.graph-empty{position:absolute;top:42%;left:50%;transform:translateX(-50%);background:#fbfcf8ed;border:1px solid var(--border);padding:16px 20px;border-radius:7px;max-width:85%;text-align:center;font-size:11px;line-height:1.8;pointer-events:none}.graph-empty span{font-size:10px;color:var(--muted)}.method-strip{border-bottom:1px solid var(--border);margin-top:21px}.method-strip summary{display:flex;justify-content:space-between;gap:20px;align-items:center;cursor:pointer;list-style:none;padding:17px 0 22px;font-size:11px;font-weight:650}.method-strip summary::-webkit-details-marker{display:none}.method-summary{display:flex;align-items:center;gap:32px;font-size:10px;font-weight:400;color:var(--muted)}.method-summary>span{font-size:17px;font-weight:400}.method-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:35px;padding:0 0 23px}.method-grid h3{font-size:11px;font-weight:650;margin:0 0 10px}.method-grid p{font-size:10px;line-height:1.85;color:var(--muted);margin:0 0 8px}.method-strip details[open] .method-summary>span{transform:rotate(45deg)}.page-footer{display:flex;justify-content:space-between;gap:15px;align-items:center;padding:21px 0 29px;font-size:8px;color:#8a9689}.page-footer>a{color:#788d78;text-decoration:none}.page-footer>span:last-child{font-size:7px;letter-spacing:1.2px}.visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}body.metric-mi{--teal:#8062ac}body.metric-mi .node-dot{background:#5e9581}body.metric-mi .node-dot.excluded{background:transparent}@media(min-width:1550px){.graph-stage{height:650px}:root{--sidebar:350px}.controls{gap:34px}.slider-control{max-width:240px}.detail-pane{padding-left:28px;padding-right:28px}}@media(max-width:1160px){.page-header{margin:0 24px}main{padding:0 24px}.stats{gap:18px}.stats>div{padding-left:17px}.stats strong{font-size:24px}:root{--sidebar:290px}.controls{gap:17px}.budget-control{max-width:none}.pill{display:none}.slider-control{min-width:105px}.metric-switch span{padding:9px}.graph-stage{height:560px}.detail-pane{padding-left:20px;padding-right:20px}}@media(max-width:920px){.intro{align-items:flex-start;padding-top:30px;flex-direction:column;gap:25px}.stats{gap:28px}.stats>div:first-child{border:0;padding-left:0}.stats strong{font-size:26px}.controls{gap:17px}.metric-switch{flex-basis:100%;width:100%}.metric-switch label{flex:1;text-align:center}.graph-heading{padding:21px 20px 18px}.controls{padding-left:20px;padding-right:20px}.graph-stage{height:540px}.network-footer{padding:12px 20px;align-items:flex-start;flex-direction:column;gap:12px}.graph-legend{gap:8px;left:12px}.legend-weight{border:0;padding-left:0;flex-basis:100%}.gesture-hint{left:20px;font-size:7px}.stage-note{left:13px}.method-grid{gap:22px}}@media(max-width:720px){.page-header{height:66px;margin:0 18px}.brand{font-size:9px;letter-spacing:1.1px}.edition{font-size:8px;gap:10px}.edition>span{padding:6px;font-size:8px}.edition{font-size:0}main{padding:0 16px}.intro{padding:28px 2px;gap:23px}h1{font-size:34px;letter-spacing:-1.5px}.eyebrow{font-size:8px;letter-spacing:1.35px}.intro-copy{font-size:11px}.stats{width:100%;gap:20px;justify-content:space-between}.stats>div{padding-left:20px;gap:5px}.stats strong{font-size:25px}.stats span{font-size:9px}.explorer{grid-template-columns:minmax(0,1fr)}.graph-heading{padding:20px 18px 18px}.graph-heading h2{font-size:13px}.graph-heading p{font-size:9px}.controls{padding:0 18px 18px;gap:15px}.metric-switch span{font-size:11px;padding:10px}.slider-control{max-width:none;min-width:125px}.graph-stage{height:500px;min-height:360px}.stage-note{font-size:8px}.network-footer{flex-direction:row;align-items:center;padding:13px 18px;font-size:7px}.network-footer>span{max-width:60%}.network-footer button{font-size:8px}.detail-pane{border-left:0;border-top:1px solid var(--border);padding:22px 22px}.sidebar-title h2{font-size:13px}.sidebar-title>span{font-size:8px}.search-field{height:43px}.search-field input{font-size:12px}.selection-empty{padding:20px 0 18px}.empty-motif{width:93px;margin-bottom:15px}.selection-empty p{max-width:300px}.metric-explanation{margin-top:10px}.metric-explanation p:last-child{font-size:11px}.household-stats{grid-template-columns:1fr 1fr 1fr}.household-stats>div:last-child{grid-column:auto}.selection-heading h3{font-size:29px}.profile-section{padding-top:20px}.section-label h4{font-size:11px}.section-label>span{font-size:8px}#daily-profile{height:100px}.profile-note,.connection-note{font-size:9px}.neighbor-row{font-size:11px;padding:10px 0}.neighbor-row>span:last-child{font-size:11px}.method-strip{margin-top:13px}.method-strip summary{font-size:10px}.method-summary{font-size:8px;gap:12px}.method-grid{grid-template-columns:1fr;gap:14px}.method-grid p{font-size:11px}.page-footer{flex-wrap:wrap;font-size:8px;line-height:1.6;padding:18px 0 24px}.page-footer>span:last-child{width:100%}.graph-toolbar{right:12px}.graph-legend{left:12px}.gesture-hint{left:18px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+.pair-comparison{border-bottom:1px solid var(--border);padding-bottom:18px;margin-bottom:22px}.pair-comparison label{display:block;font-size:10px;margin:12px 0 6px;color:var(--muted)}.pair-comparison input{width:100%;min-width:0;border:1px solid var(--border);border-radius:5px;padding:10px;background:#fff;font:inherit;font-size:12px}.pair-button{margin-top:12px;padding:10px 15px;width:100%;background:var(--ink);color:white;border:0;border-radius:5px;cursor:pointer;font:inherit;font-size:11px}.pair-results{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}.pair-results[hidden]{display:none}.pair-results dt{font-size:9px;color:var(--muted)}.pair-results dd{font-size:18px;margin:5px 0 0;font-variant-numeric:tabular-nums}.pair-results div:last-child{grid-column:1/-1}.pair-comparison p,.pair-file-details summary{font-size:10px;line-height:1.7}.pair-file-details summary{cursor:pointer;color:var(--ink)}.pair-comparison input[type=file]{font-size:10px}.pair-file-details{margin-top:12px}#pair-status{overflow-wrap:anywhere}
 /* Keep the graph viewport stable while the independent details panel expands. */
 .legend-line.positive { background: #2563eb; }
 .legend-line.negative { background: #eab308; }
@@ -60,12 +61,23 @@
           <div class="graph-toolbar" aria-label="Network navigation"><button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">+</button><button id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out">−</button><button id="fit" type="button" title="Fit all households (0)" aria-label="Fit all households"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3H3v4m10-4h4v4M3 13v4h4m10-4v4h-4"/></svg></button></div>
           <div class="graph-empty" id="graph-empty" hidden>No candidate connections meet this filter.<br><span>Lower the minimum to see more edges.</span></div>
           <div class="tooltip" id="node-tooltip" role="status" hidden></div>
-          <div class="gesture-hint">Scroll to zoom · drag to pan · select a household</div>
+          <div class="gesture-hint">Pinch or scroll to zoom · drag to pan · tap a household</div>
         </div>
         <div class="network-footer"><div class="node-legends"><div id="node-color-legend"><span>Mean use · kWh / half hour<br>Quadratic · yellow = average</span><span class="consumption-scale"><span class="consumption-gradient" aria-hidden="true"></span><span class="consumption-stops"><span>Min <b id="consumption-min">—</b></span><span>Mean <b id="consumption-middle">—</b></span><span>Max <b id="consumption-max">—</b></span></span></span></div><span class="quality-legend"><i class="node-dot excluded"></i>Dashed outline: <span id="limited-node-legend">Correlation unavailable</span></span></div><button id="export-edges" type="button">Export visible edges <span aria-hidden="true">↗</span></button></div>
       </div>
 
       <aside class="detail-pane" aria-label="Household details">
+        <section class="pair-comparison" aria-labelledby="pair-title">
+          <div class="sidebar-title"><h2 id="pair-title">Compare two households</h2><span>PAIR METRICS</span></div>
+          <form id="pair-form">
+            <label for="pair-a">Household A</label><input id="pair-a" list="household-list" placeholder="MAC000002" autocomplete="off" spellcheck="false" required>
+            <label for="pair-b">Household B</label><input id="pair-b" list="household-list" placeholder="MAC000003" autocomplete="off" spellcheck="false" required>
+            <button type="submit" class="pair-button">Compare pair</button>
+          </form>
+          <dl class="pair-results" id="pair-results" hidden><div><dt>Pearson r</dt><dd id="pair-r"></dd></div><div><dt>MI · nats</dt><dd id="pair-mi"></dd></div><div><dt>Shared readings</dt><dd id="pair-n"></dd></div></dl>
+          <p id="pair-status" role="status" aria-live="polite">Compare any two distinct household IDs. Both metrics appear together.</p>
+          <details class="pair-file-details"><summary>Load all household pairs</summary><p>For pairs outside the graph, choose household-pairs.gspairs once. The file stays on this device; only the requested pair is read.</p><input id="pair-file" type="file" accept=".gspairs" aria-label="Load complete pair results"><p id="pair-file-status" role="status">Graph candidates are available without a file.</p></details>
+        </section>
         <div class="sidebar-title"><h2>Find a household</h2><span>01 / EXPLORE</span></div>
         <form id="search-form"><label class="visually-hidden" for="household-search">Household ID</label><div class="search-field"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m12.5 12.5 4 4"/></svg><input id="household-search" type="text" list="household-list" placeholder="Search household ID…" autocomplete="off" spellcheck="false"><button type="submit" aria-label="Find household">↵</button></div><datalist id="household-list"></datalist><p class="search-message" id="search-message" role="status"></p></form>
         <div class="selection-empty" id="selection-empty"><div class="empty-motif" aria-hidden="true"><svg viewBox="0 0 130 105"><path d="M24 34 65 51 105 22M65 51 97 85M65 51 29 89"/><circle cx="24" cy="34" r="5"/><circle cx="105" cy="22" r="5"/><circle cx="97" cy="85" r="5"/><circle cx="29" cy="89" r="5"/><circle class="center" cx="65" cy="51" r="11"/></svg></div><h3>A city of individual rhythms.</h3><p>Select a node or search an ID to explore its strongest available connections and daily electricity use.</p><button id="example-household" class="text-button" type="button">Explore a household <span aria-hidden="true">→</span></button></div>
@@ -112,6 +124,69 @@
   };
   const nodeColors = nodes.map(node => consumptionColor(node.mean));
   const nodeById = new Map(nodes.map((node, index) => [String(node.id).toUpperCase(), index]));
+  let pairFile = null;
+  let pairDataOffset = 0;
+  let pairRequest = 0;
+  function pairNumber(value, signed = false) {
+    return Number.isFinite(value) ? `${signed && value > 0 ? '+' : ''}${value.toFixed(6)}` : 'Unavailable';
+  }
+  async function comparePair(event) {
+    if (event) event.preventDefault();
+    const request = ++pairRequest;
+    $('pair-results').hidden = true;
+    const a = nodeById.get($('pair-a').value.trim().toUpperCase());
+    const b = nodeById.get($('pair-b').value.trim().toUpperCase());
+    if (a === undefined || b === undefined) { $('pair-status').textContent = 'Choose two valid household IDs from the suggestions.'; return; }
+    if (a === b) { $('pair-status').textContent = 'Choose two different households.'; return; }
+    const s = Math.min(a,b), t = Math.max(a,b);
+    let pair = edges.find(edge => edge.s === s && edge.t === t);
+    try {
+      if (pairFile) {
+        const index = s * (2 * nodes.length - s - 1) / 2 + t - s - 1;
+        const bytes = await pairFile.slice(pairDataOffset + index * 10, pairDataOffset + index * 10 + 10).arrayBuffer();
+        if (bytes.byteLength !== 10) throw new Error('Pair file is incomplete.');
+        const view = new DataView(bytes);
+        pair = { r: view.getFloat32(0,true), mi: view.getFloat32(4,true), n: view.getUint16(8,true) };
+      }
+      if (request !== pairRequest) return;
+      if (!pair) {
+        $('pair-status').textContent = 'This pair is outside the sparse graph. Open “Load all household pairs” below and choose household-pairs.gspairs to show its exact metrics.';
+        document.querySelector('.pair-file-details').open = true;
+        return;
+      }
+      $('pair-r').textContent = pairNumber(pair.r, true);
+      $('pair-mi').textContent = pairNumber(pair.mi);
+      $('pair-n').textContent = number(pair.n);
+      $('pair-results').hidden = false;
+      $('pair-status').textContent = `${nodes[a].id} ↔ ${nodes[b].id}. ${meta.miAlgorithm === 1 ? `JIDT KSG-1, k=${meta.miK}` : `JIDT binned MI, up to ${meta.miBins ?? 8} bins`}. ${pair.n < (meta.minOverlap ?? 1000) ? 'Insufficient shared readings; both metrics unavailable.' : !finite(pair.r) ? 'Pearson correlation is undefined for a constant series.' : 'Exact stored pair values; rounded to six decimal places.'}`;
+    } catch(error) { if (request === pairRequest) $('pair-status').textContent = error.message; }
+  }
+  $('pair-form').addEventListener('submit', comparePair);
+  ['pair-a','pair-b'].forEach(id => $(id).addEventListener('input', () => { ++pairRequest; $('pair-results').hidden = true; $('pair-status').textContent = 'Press Compare pair to update both metrics.'; }));
+  let fileRequest = 0;
+  $('pair-file').addEventListener('change', async () => {
+    const request = ++fileRequest;
+    ++pairRequest; pairFile = null; $('pair-results').hidden = true;
+    const file = $('pair-file').files[0];
+    if (!file) return;
+    try {
+      const prefix = await file.slice(0,12).arrayBuffer();
+      if (prefix.byteLength !== 12 || new TextDecoder().decode(prefix.slice(0,8)) !== 'GSPAIR01') throw new Error('Choose a GSclone .gspairs results file.');
+      const length = new DataView(prefix).getUint32(8,true);
+      if (length > 2000000 || length < 2) throw new Error('Invalid pair-file header.');
+      const header = JSON.parse(await file.slice(12,12+length).text());
+      if (header.format !== 'GSclone-pairs-v1' || header.sourceSha256 !== meta.sourceSha256 ||
+          header.miEstimator !== meta.miEstimator || (header.miAlgorithm ?? null) !== (meta.miAlgorithm ?? null) ||
+          (header.miK ?? null) !== (meta.miK ?? null) || (header.miBins ?? null) !== (meta.miBins ?? null) ||
+          header.minOverlap !== meta.minOverlap || !Array.isArray(header.ids) || header.ids.length !== nodes.length ||
+          !header.ids.every((id,i) => id === nodes[i].id) || header.count !== nodes.length*(nodes.length-1)/2 ||
+          file.size !== 12+length+header.count*10) throw new Error('This file does not match the dataset and MI estimator in this HTML.');
+      if (request !== fileRequest) return;
+      pairFile = file; pairDataOffset = 12+length;
+      $('pair-file-status').textContent = `All ${number(header.count)} household pairs are ready. Nothing uploaded.`;
+      if ($('pair-a').value && $('pair-b').value) await comparePair();
+    } catch(error) { if (request === fileRequest) $('pair-file-status').textContent = error.message; }
+  });
   const adjacency = Array.from({ length: nodes.length }, () => []);
   edges.forEach(edge => {
     if (Number.isInteger(edge.s) && Number.isInteger(edge.t) && adjacency[edge.s] && adjacency[edge.t]) {
@@ -132,6 +207,8 @@
   let fitScale = 1;
   let view = { x: 0, y: 0, scale: 1 };
   let drag = null;
+  const pointers = new Map();
+  let pinch = null;
   let renderQueued = false;
   const canvas = $('network');
   const ctx = canvas.getContext('2d');
@@ -143,7 +220,19 @@
     r: edges.filter(edge => finite(edge.r) && Math.abs(edge.r) > 0).sort((a, b) => Math.abs(b.r) - Math.abs(a.r) || a.s - b.s || a.t - b.t),
     mi: edges.filter(edge => finite(edge.mi) && edge.mi > 0).sort((a, b) => b.mi - a.mi || a.s - b.s || a.t - b.t)
   };
-  const maxMi = Math.max(0.01, ...sorted.mi.slice(0, 1).map(edge => edge.mi));
+  const maxMi = sorted.mi[0]?.mi || 0.01;
+  const candidateMi = edges.filter(edge => finite(edge.mi) && edge.mi >= 0);
+  const meanMi = candidateMi.length ? candidateMi.reduce((sum, edge) => sum + edge.mi, 0) / candidateMi.length : 0;
+  // Fixed candidate-population anchors: filtering never changes a given edge's style.
+  function miStyle(value) {
+    if (!(value > 0)) return { width: 0, opacity: 0 };
+    if (value <= meanMi && meanMi > 0) {
+      const q = Math.pow(value / meanMi, 2);
+      return { width: 1.5 * q, opacity: 0.7 * q };
+    }
+    const q = maxMi > meanMi ? Math.pow(Math.min(1, (value - meanMi) / (maxMi - meanMi)), 2) : 0;
+    return { width: 1.5 + 1.5 * q, opacity: 0.7 + 0.3 * q };
+  }
   const eligibleByMetric = {
     r: nodes.map((node, index) => typeof node.correlationEligible === 'boolean' ? node.correlationEligible : node.eligible !== false && adjacency[index].some(edge => finite(edge.r))),
     mi: nodes.map((node, index) => typeof node.miEligible === 'boolean' ? node.miEligible : node.eligible !== false && adjacency[index].some(edge => finite(edge.mi)))
@@ -213,8 +302,9 @@
     if (!(strength > 0)) return;
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
     ctx.strokeStyle = edgeColor(edge);
-    ctx.globalAlpha = 0.04 + 0.81 * Math.min(1, strength);
-    ctx.lineWidth = 0.25 + 3.75 * Math.min(1, strength);
+    const style = metric === 'mi' ? miStyle(edge.mi) : { opacity: 0.04 + 0.81 * Math.min(1, strength), width: 0.25 + 3.75 * Math.min(1, strength) };
+    ctx.globalAlpha = style.opacity;
+    ctx.lineWidth = style.width;
     ctx.stroke();
   }
 
@@ -415,7 +505,7 @@
       : 'Mutual information detects dependence beyond a straight-line relationship. Thicker, more opaque purple edges mean higher MI, measured in nats. It has no positive or negative sign.';
     $('graph-legend').innerHTML = metric === 'r'
       ? '<span><i class="legend-line positive"></i>Positive</span><span><i class="legend-line negative"></i>Negative</span><span class="legend-weight">Thicker + more opaque = stronger |r|</span>'
-      : '<span><i class="legend-line mi"></i>Mutual information</span><span class="legend-weight">Thicker + more opaque = higher MI · nats</span>';
+      : `<span><i class="legend-line mi"></i>MI · quadratic scale</span><span class="legend-weight">Mean ${meanMi.toFixed(3)}: 1.5 px / 70% · Max ${maxMi.toFixed(3)}: 3 px / 100%</span>`;
     $('limited-node-legend').textContent = metric === 'r' ? 'Correlation unavailable' : 'MI unavailable';
     updateVisibleEdges(); if (selected !== null) { renderSelectedStatus(); renderNeighbors(); }
     announce(`Edges now show ${metric === 'r' ? 'Pearson correlation' : 'mutual information in nats'}. Household positions are unchanged.`);
@@ -449,11 +539,29 @@
   canvas.addEventListener('pointerdown', event => {
     if (event.button !== 0) return;
     const rect = canvas.getBoundingClientRect();
+    pointers.set(event.pointerId, { x: event.clientX - rect.left, y: event.clientY - rect.top });
     drag = { id: event.pointerId, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top, moved: false };
+    if (pointers.size > 1) {
+      drag = null; pinch = { ...pinchGeometry(), view: { ...view } }; hovered = null; scheduleDraw();
+    }
     canvas.setPointerCapture(event.pointerId); canvas.classList.add('dragging'); $('node-tooltip').hidden = true;
   });
+  function pinchGeometry() {
+    const [a, b] = Array.from(pointers.values());
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, distance: Math.hypot(a.x - b.x, a.y - b.y) };
+  }
   canvas.addEventListener('pointermove', event => {
     const rect = canvas.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top;
+    if (pointers.has(event.pointerId)) pointers.set(event.pointerId, { x, y });
+    if (pointers.size > 1) {
+      const next = pinchGeometry();
+      if (pinch && pinch.distance > 0 && next.distance > 0) {
+        const scale = Math.max(fitScale * 0.3, Math.min(fitScale * 30, pinch.view.scale * next.distance / pinch.distance));
+        const ratio = scale / pinch.view.scale;
+        view = { scale, x: next.x - (pinch.x - pinch.view.x) * ratio, y: next.y - (pinch.y - pinch.view.y) * ratio };
+      }
+      scheduleDraw(); return;
+    }
     if (drag && drag.id === event.pointerId) {
       const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
       if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 3) drag.moved = true;
@@ -464,13 +572,21 @@
     if (hovered !== index) { hovered = index; scheduleDraw(); }
     showTooltip(index, x, y); canvas.style.cursor = index === null ? 'grab' : 'pointer';
   });
-  canvas.addEventListener('pointerup', event => {
-    if (!drag || event.pointerId !== drag.id) return;
-    if (!drag.moved) selectNode(nearest(drag.offsetX, drag.offsetY));
-    drag = null; canvas.classList.remove('dragging');
+  function endPointer(event) {
+    if (!pointers.has(event.pointerId)) return;
+    if (event.type === 'pointerup' && drag && event.pointerId === drag.id && !drag.moved && pointers.size === 1) selectNode(nearest(drag.offsetX, drag.offsetY));
+    pointers.delete(event.pointerId); drag = null; pinch = null;
+    if (pointers.size > 1) pinch = { ...pinchGeometry(), view: { ...view } };
+    else if (pointers.size === 1) {
+      const [id, p] = pointers.entries().next().value, rect = canvas.getBoundingClientRect();
+      drag = { id, x: p.x + rect.left, y: p.y + rect.top, startX: p.x + rect.left, startY: p.y + rect.top, offsetX: p.x, offsetY: p.y, moved: true };
+    }
+    if (!pointers.size) canvas.classList.remove('dragging');
     if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-  });
-  canvas.addEventListener('pointercancel', () => { drag = null; canvas.classList.remove('dragging'); });
+  }
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  canvas.addEventListener('lostpointercapture', endPointer);
   canvas.addEventListener('pointerleave', () => { if (!drag) { hovered = null; $('node-tooltip').hidden = true; scheduleDraw(); } });
   canvas.addEventListener('keydown', event => {
     const actions = { '+': () => zoomBy(1.3), '=': () => zoomBy(1.3), '-': () => zoomBy(1 / 1.3), '0': fit, Escape: () => selectNode(null), ArrowLeft: () => { view.x += 40; }, ArrowRight: () => { view.x -= 40; }, ArrowUp: () => { view.y += 40; }, ArrowDown: () => { view.y -= 40; } };
@@ -499,8 +615,8 @@
   $('method-cleaning').textContent = `Duplicate household/timestamp readings are resolved before analysis. Metrics use only jointly available timestamps, with a minimum of ${number(meta.minOverlap ?? 1000)} paired readings. Missing values are not imputed for either metric. Coverage describes available half-hour slots.`;
   $('method-metrics').textContent = meta.miAlgorithm === 1
     ? `Pearson correlation uses raw half-hour kWh. MI uses JIDT KSG algorithm 1 with k=${meta.miK}, continuous readings, paired-observation standardization, and reproducible tiny noise to break ties. KSG returns nats directly. Negative finite-sample estimates are retained in the complete results; only positive MI is drawn. No temporal exclusion window is applied. Constant variables have MI set to zero and undefined correlation.`
-    : `Pearson correlation uses raw half-hour kWh. This displayed dataset uses JIDT's discrete estimator with up to ${meta.miBins ?? 8} quantile bins, converted to nats. The full KSG-1 calculation is pending; this view has not been relabelled as KSG. Constant series have undefined correlation.`;
-  $('method-network').textContent = `All household pairs are evaluated, but this HTML contains ${number(edges.length)} candidate edges: the union of each household's strongest ${meta.topK ?? 12} neighbors per metric. Filters show a subset; selecting a household adds its strongest candidates. Node hue uses a quadratic scale on each side of the mean household consumption: green at the minimum, yellow at the mean, red at the maximum. Values are January mean kWh per observed half-hour, excluding missing readings. Edge width and opacity both rise linearly with |r| or MI divided by the largest candidate MI. Opacity scales differ between metrics. Complete pair results are in analysis/pairs.npz.`;
+    : `Pearson correlation uses raw half-hour kWh. This displayed dataset uses JIDT's discrete estimator with up to ${meta.miBins ?? 8} quantile bins, converted to nats. Binned MI remains the active complete result while faster KSG execution is investigated. Constant series have undefined correlation.`;
+  $('method-network').textContent = `All household pairs are evaluated, but this HTML contains ${number(edges.length)} candidate edges: the union of each household's strongest ${meta.topK ?? 12} neighbors per metric. Filters show a subset; selecting a household adds its strongest candidates. Node hue uses a quadratic scale on each side of the mean household consumption: green at the minimum, yellow at the mean, red at the maximum. Values are January mean kWh per observed half-hour, excluding missing readings. Correlation width and opacity rise linearly with |r|. MI uses a quadratic scale on each side of the fixed mean of nonnegative candidate-edge MI values (including zeros): below the mean, width = 1.5 × (MI / mean)² px and opacity = 70% × (MI / mean)²; above the mean, the squared fraction from mean to maximum increases width from 1.5 to 3 px and opacity from 70% to 100%. Filters do not change these anchors. Complete pair results are in analysis/pairs.npz.`;
   const sourceUrl = typeof meta.source === 'string' ? meta.source : meta.source?.url || meta.sourceUrl;
   if (sourceUrl && /^https?:\/\//.test(sourceUrl)) { $('source-link').href = sourceUrl; $('source-link').hidden = false; }
   if (meta.repository && /^https?:\/\//.test(meta.repository)) $('repository-link').href = meta.repository;
